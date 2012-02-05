@@ -1,0 +1,11 @@
+package vectops
+
+func NormFloat32s(out, x, y []float32) {
+	out = x*x + y*y
+}
+
+func AddUints(out, in1, in2 []uint) {
+	out = in1 + in2
+}
+
+// vim: set ft=go:

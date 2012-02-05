@@ -16,22 +16,17 @@ func (f *Function) CodeGen(w codeWriter) {
 	fmt.Fprintf(w, "// %s\n", f.ForwardDecl())
 	fmt.Fprintf(w, "TEXT ·%s(SB), 7, $0\n", f.Name)
 	f.WritePrologue(w)
-	/*
-		instrs := f.Intrs()
-		for _, opcode := range instrs {
-			Printw.opcode(opcode)
-		}
-	*/
+	c := NewCompiler('6')
+	err := c.Compile(f, w)
+	if err != nil {
+		panic(err)
+	}
 	f.WriteEpilogue(w)
 	fmt.Fprintln(w, "")
 }
 
-var inputRegs = []string{
-	"SI", "DI",
-	"R8", "R9", "R10", "R11",
-	"R12", "R13", "R14", "R15"}
-
 func (f *Function) WritePrologue(w codeWriter) {
+	inputRegs := amd64.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
 	// DX: length
@@ -71,6 +66,7 @@ func (f *Function) WritePrologue(w codeWriter) {
 }
 
 func (f *Function) WriteEpilogue(w codeWriter) {
+	w.opcode("JMP", f.Name+"·loop")
 	w.label(f.Name, "return")
 	w.opcode("RET")
 }

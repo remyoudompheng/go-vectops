@@ -11,7 +11,7 @@ import (
 )
 
 const testDecl = `
-func F(out, in1, in2, in3 []float64) {
+func F(out, in1, in2, in3 []float32) {
 	out = in1 + in2 * in3
 }
 `
@@ -25,8 +25,8 @@ func TestVectorFunc(t *testing.T) {
 		t.Errorf("F should be vectorizable")
 	case !reflect.DeepEqual(f.Args, []string{"out", "in1", "in2", "in3"}):
 		t.Errorf("wrong args for F: got %v", f.Args)
-	case f.ScalarType != "float64":
-		t.Errorf("wrong scalar type %s, expected float64", f.ScalarType)
+	case f.ScalarType != "float32":
+		t.Errorf("wrong scalar type %s, expected float32", f.ScalarType)
 	}
 	t.Logf("function info: %+v", f)
 	buf := new(bytes.Buffer)

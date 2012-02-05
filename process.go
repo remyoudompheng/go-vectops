@@ -22,9 +22,7 @@ type Function struct {
 }
 
 func (f Function) ForwardDecl() string {
-	buf := new(bytes.Buffer)
-	printer.Fprint(buf, fset, f.Decl)
-	return string(buf.Bytes())
+	return FormatNode(f.Decl)
 }
 
 func (f Function) String() string {
@@ -86,7 +84,7 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 		} else {
 			// an identifier
 			switch ident.Name {
-			case "float64", "uint", "uint32":
+			case "float32", "float64", "uint", "uint32":
 				// Ok.
 				scalarType = ident.Name
 			default:

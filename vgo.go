@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"go/ast"
+	"go/printer"
 	"go/scanner"
 	"go/token"
 	"os"
@@ -10,6 +13,12 @@ import (
 var (
 	fset = token.NewFileSet()
 )
+
+func FormatNode(node ast.Node) string {
+	buf := new(bytes.Buffer)
+	printer.Fprint(buf, fset, node)
+	return string(buf.Bytes())
+}
 
 func main() {
 	files, _ := filepath.Glob("*.vgo")
