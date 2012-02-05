@@ -8,14 +8,23 @@ import (
 	"go/printer"
 	"go/token"
 	"os"
-	"path/filepath"
 )
 
 type Function struct {
-	Body       *ast.FuncDecl
+	Name       string
 	Args       []string // argument names.
-	Formula    ast.Expr // main formula.
 	ScalarType string   // the scalar type ("int", "uint", "float64"...)
+
+	// AST information.
+	Decl    *ast.FuncDecl
+	Body    *ast.BlockStmt
+	Formula ast.Expr // main formula.
+}
+
+func (f Function) ForwardDecl() string {
+	buf := new(bytes.Buffer)
+	printer.Fprint(buf, fset, f.Decl)
+	return string(buf.Bytes())
 }
 
 func (f Function) String() string {
@@ -23,7 +32,7 @@ func (f Function) String() string {
 	printer.Fprint(buf, token.NewFileSet(), f.Formula)
 	return fmt.Sprintf(
 		"%s (%v :: [%s]) -> %s",
-		f.Body.Name.Name, f.Args, f.ScalarType, buf.Bytes())
+		f.Name, f.Args, f.ScalarType, buf.Bytes())
 }
 
 type Translator struct {
@@ -31,7 +40,7 @@ type Translator struct {
 }
 
 // Visit implements the ast.Visitor interface.
-func (t Translator) Visit(node ast.Node) ast.Visitor {
+func (t *Translator) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.FuncDecl:
 		if op, ok := IsVectorOp(n); ok {
@@ -96,13 +105,13 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 		return
 	}
 	expr := body.Rhs[0]
-	// Clone declaration.
-	olddecl := new(ast.FuncDecl)
-	*olddecl = *decl
-	// Wipe out function body.
+	// Save function body.
+	savebody := decl.Body
 	decl.Body = nil
 	return &Function{
-		Body:       olddecl,
+		Name:       decl.Name.Name,
+		Decl:       decl,
+		Body:       savebody,
 		Args:       paramNames,
 		ScalarType: scalarType,
 		Formula:    expr}, true
@@ -111,8 +120,9 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 // ProcessFile processes an input file and write a go and an assembly
 // source file.
 func ProcessFile(fset *token.FileSet, filename string) (err error) {
-	goFile := filepath.Base(filename) + "_amd64.go"
-	asmFile := filepath.Base(filename) + "_amd64.s"
+	baseName := filename[:len(filename)-len(".vgo")]
+	goFile := baseName + "_amd64.go"
+	asmFile := baseName + "_amd64.s"
 
 	// Parse and preprocess.
 	goInput, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
