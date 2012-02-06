@@ -8,4 +8,18 @@ func AddUints(out, in1, in2 []uint) {
 	out = in1 + in2
 }
 
+func SomeFormula(out, x, y, z []float32) {
+	out = (x*y + y*z + z*x) / (x*x + y*y + z*z)
+}
+
+func subByte(out, a, b []byte) {
+	out = a - b
+}
+
+func Diff(a []byte) []byte {
+	result := make([]byte, len(a)-1)
+	subByte(result, a[1:], a[:len(a)-1])
+        return result
+}
+
 // vim: set ft=go:

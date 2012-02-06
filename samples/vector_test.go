@@ -35,3 +35,16 @@ func TestNormF32(t *testing.T) {
 		}
 	}
 }
+
+func TestDiff(t *testing.T) {
+	a := make([]byte, 257)
+	for i := range a {
+		a[i] = 'a' + byte(i/10)
+	}
+	c := Diff(a)
+	for i, x := range c {
+		if x != a[i+1]-a[i] {
+			t.Errorf("got c[%d] = %d, expected %d", i, x, a[i+1]-a[i])
+		}
+	}
+}
