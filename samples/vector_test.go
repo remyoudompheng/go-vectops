@@ -37,6 +37,7 @@ func TestNormF32(t *testing.T) {
 }
 
 func TestDiff(t *testing.T) {
+	// 257 is for a[1:] to have length multiple of 16.
 	a := make([]byte, 257)
 	for i := range a {
 		a[i] = 'a' + byte(i/10)
@@ -47,4 +48,37 @@ func TestDiff(t *testing.T) {
 			t.Errorf("got c[%d] = %d, expected %d", i, x, a[i+1]-a[i])
 		}
 	}
+}
+
+func BenchmarkDiff(b *testing.B) {
+	const length = 1 << 16
+	// a[1:] must have length multiple of 16.
+	a := make([]byte, length+1)
+	for i := 0; i < b.N; i++ {
+		Diff(a)
+	}
+	b.SetBytes(length)
+}
+
+func BenchmarkDiffNoAlloc(b *testing.B) {
+	const length = 1 << 16
+	// a[1:] must have length multiple of 16.
+	a := make([]byte, length+1)
+	out := make([]byte, length)
+	for i := 0; i < b.N; i++ {
+		subByte(out, a[1:], a[:length])
+	}
+	b.SetBytes(length)
+}
+
+func BenchmarkDiffNoSIMD(b *testing.B) {
+	const length = 1 << 16
+	a := make([]byte, length+1)
+	out := make([]byte, length)
+	for i := 0; i < b.N; i++ {
+		for i, x := range a[1:] {
+			out[i] = x - a[i]
+		}
+	}
+	b.SetBytes(length)
 }
