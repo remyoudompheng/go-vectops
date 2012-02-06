@@ -25,6 +25,12 @@ func (f Function) ForwardDecl() string {
 	return FormatNode(f.Decl)
 }
 
+func forwardDecl(decl *ast.FuncDecl) string {
+	fwd := *decl
+	fwd.Body = nil
+	return FormatNode(&fwd)
+}
+
 func (f Function) String() string {
 	buf := bytes.NewBuffer(nil)
 	printer.Fprint(buf, token.NewFileSet(), f.Formula)
@@ -41,8 +47,11 @@ type Translator struct {
 func (t *Translator) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.FuncDecl:
-		if op, ok := IsVectorOp(n); ok {
+		if op, err := IsVectorOp(n); err == nil {
 			t.funcs = append(t.funcs, op)
+		} else {
+			fmt.Fprintln(os.Stderr, forwardDecl(n))
+			fmt.Fprintf(os.Stderr, "\tskipping: %s\n", err)
 		}
 	}
 	return t
@@ -56,18 +65,16 @@ func (t *Translator) Visit(node ast.Node) ast.Visitor {
 // 	}
 //
 // where arithExpr is a simple arithmetic expression.
-func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
+func IsVectorOp(decl *ast.FuncDecl) (f *Function, err error) {
 	switch {
-	case
-		// Don't process methods.
-		decl.Recv != nil,
-		// Don't process functions with results.
-		decl.Type.Results != nil,
-		// Only one parameter list.
-		len(decl.Type.Params.List) != 1,
-		// Only one statement.
-		len(decl.Body.List) != 1:
-		return
+	case decl.Recv != nil:
+		return nil, fmt.Errorf("is method")
+	case decl.Type.Results != nil:
+		return nil, fmt.Errorf("has return values")
+	case len(decl.Type.Params.List) != 1:
+		return nil, fmt.Errorf("many parameter lists")
+	case len(decl.Body.List) != 1:
+		return nil, fmt.Errorf("more than 1 statement")
 	}
 	// Now the function declaration has the form:
 	//     func F(a1, a2, a3 T) { stmt; }
@@ -75,20 +82,18 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 	var scalarType string
 	if t, ok := paramType.(*ast.ArrayType); !ok || t.Len != nil {
 		// only process slice types.
-		return
+		return nil, fmt.Errorf("non-slice type %s", FormatNode(paramType))
 	} else {
 		// the slice element type must be simple.
 		elemType := t.Elt
 		if ident, ok := elemType.(*ast.Ident); !ok {
-			return
+			return nil, fmt.Errorf("unsupported type %s", FormatNode(paramType))
 		} else {
 			// an identifier
-			switch ident.Name {
-			case "float32", "float64", "uint", "uint32":
-				// Ok.
+			if _, ok := types[ident.Name]; ok {
 				scalarType = ident.Name
-			default:
-				return
+			} else {
+				return nil, fmt.Errorf("unsupported type %s", FormatNode(paramType))
 			}
 		}
 	}
@@ -100,7 +105,7 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 	body, isAssign := decl.Body.List[0].(*ast.AssignStmt)
 	switch {
 	case !isAssign, len(body.Lhs) != 1, len(body.Rhs) != 1:
-		return
+		return nil, fmt.Errorf("statement %s is not an assignment", FormatNode(body))
 	}
 	expr := body.Rhs[0]
 	// Save function body.
@@ -112,7 +117,7 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, vectOk bool) {
 		Body:       savebody,
 		Args:       paramNames,
 		ScalarType: scalarType,
-		Formula:    expr}, true
+		Formula:    expr}, nil
 }
 
 // ProcessFile processes an input file and write a go and an assembly
