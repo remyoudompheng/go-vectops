@@ -90,6 +90,8 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 		} else {
 			return v, nil
 		}
+	case *ast.ParenExpr:
+		return c.buildTree(node.X, vars, regs)
 	case *ast.BinaryExpr:
 		op := node.Op
 		left, err := c.buildTree(node.X, vars, regs)
