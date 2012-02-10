@@ -18,19 +18,19 @@ ok1:
     JE      ok2
     CALL    runtime·panicindex(SB)
 
-    // start the addition.
 ok2:
-    MOVL     $0, CX
+    // last index is len(out)-4
+    SUBL     $4, R12
+    // start the addition.
+    MOVL     $0, CX    // i = 0
 loop:
     CMPL     CX, R12
-    JGE      return
-    // load in1 and in2
-    MOVUPS   (R10)(CX*4), X10
-    PADDL    (R11)(CX*4), X10
-    MOVUPS   X10, (R9)(CX*4)
+    JG       return    // if i > len(out)-4 { return }
+    MOVUPS   (R10)(CX*4), X10 // x = in1[i:i+4]
+    PADDL    (R11)(CX*4), X10 // x += in2[i:i+4]
+    MOVUPS   X10, (R9)(CX*4)  // out[i:i+4] = x
 
-    // advance by 4 doublewords.
-    ADDL     $4, CX
+    ADDL     $4, CX   // i += 4
     JMP      loop
 
 return:
