@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	fset = token.NewFileSet()
+	fset        = token.NewFileSet()
+	printconfig = printer.Config{Mode: printer.SourcePos}
 )
 
 func FormatNode(node ast.Node) string {

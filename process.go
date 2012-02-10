@@ -141,7 +141,7 @@ func ProcessFile(fset *token.FileSet, filename string) (err error) {
 		return fmt.Errorf("error creating %s: %s", goFile, err)
 	}
 	defer goF.Close()
-	printer.Fprint(goF, fset, goInput)
+	printconfig.Fprint(goF, fset, goInput)
 
 	// Write assembly.
 	asmF, err := os.Create(asmFile)
