@@ -40,6 +40,14 @@ func (a *Arch) Opcode(op token.Token, typename string) (opcode string, ok bool) 
 	return "", false
 }
 
+func IsCommutative(op token.Token) bool {
+	switch op {
+	case token.ADD, token.AND, token.OR, token.XOR, token.MUL:
+		return true
+	}
+	return false
+}
+
 func (a *Arch) Width(typename string) int {
 	return a.Types[types[typename]].Size
 }
