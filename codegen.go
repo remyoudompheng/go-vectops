@@ -88,7 +88,7 @@ func (f *Function) Compile(w codeWriter) error {
 
 type codeWriter struct{ io.Writer }
 
-func (w codeWriter) comment(format string, args...interface{}) {
+func (w codeWriter) comment(format string, args ...interface{}) {
 	fmt.Fprintf(w, "\n\t// "+format+"\n", args...)
 }
 

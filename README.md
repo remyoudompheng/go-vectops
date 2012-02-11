@@ -36,6 +36,5 @@ TODOs
 
 * support multiple statements.
 * support integer quotients (via magic constants?).
-* support arbitrary slice lengths.
 * support scalar/vector operations and constants.
 
