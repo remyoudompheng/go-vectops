@@ -19,7 +19,17 @@ func subByte(out, a, b []byte) {
 func Diff(a []byte) []byte {
 	result := make([]byte, len(a)-1)
 	subByte(result, a[1:], a[:len(a)-1])
-        return result
+	return result
+}
+
+func subuint(out, a, b []uint) {
+	out = a - b
+}
+
+func DiffInt(a []uint) []uint {
+	result := make([]uint, len(a)-1)
+	subuint(result, a[:len(a)-1], a[1:])
+	return result
 }
 
 // vim: set ft=go:

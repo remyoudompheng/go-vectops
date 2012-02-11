@@ -34,7 +34,7 @@ func NewCompiler(arch byte) *Compiler {
 type Var struct {
 	Name     string
 	Location string
-	Register bool
+	AddrReg  string
 	Type     string
 	Op       token.Token
 	Left     *Var
@@ -43,25 +43,20 @@ type Var struct {
 
 type Tree map[string]*Var
 
-func (c *Compiler) Location(v *Var) string {
-	if v.Register {
-		return v.Location
-	}
-	return fmt.Sprintf("(%s)(%s*%d)", v.Location, c.IndexReg, c.Arch.Width(v.Type))
+func (c *Compiler) MemLocation(v *Var) string {
+	return fmt.Sprintf("(%s)(%s*%d)", v.AddrReg, c.IndexReg, c.Arch.Width(v.Type))
 }
 
 func (c *Compiler) Compile(f *Function, w codeWriter) error {
 	vars := make(Tree, len(f.Args))
 	outv := &Var{Name: f.Args[0],
-		Location: "BX",
-		Register: false,
-		Type:     f.ScalarType}
+		AddrReg: "BX",
+		Type:    f.ScalarType}
 	vars[outv.Name] = outv
 	for i, inname := range f.Args[1:] {
 		inv := &Var{Name: inname,
-			Location: c.PtrRegs[i],
-			Register: false,
-			Type:     f.ScalarType}
+			AddrReg: c.PtrRegs[i],
+			Type:    f.ScalarType}
 		vars[inv.Name] = inv
 	}
 	usedregs := map[string]bool{}
@@ -73,10 +68,20 @@ func (c *Compiler) Compile(f *Function, w codeWriter) error {
 		return err
 	}
 	c.Emit(root, w)
-	w.opcode("MOVUPD", c.Location(root), c.Location(outv))
+	w.opcode("MOVUPD", root.Location, c.MemLocation(outv))
 	stride := c.Arch.VectorWidth / c.Arch.Width(f.ScalarType)
 	w.opcode("ADDL", fmt.Sprintf("$%d", stride), c.Arch.CounterReg)
 	return nil
+}
+
+func getFreeReg(regs map[string]bool) string {
+	for reg, used := range regs {
+		if !used {
+			regs[reg] = true
+			return reg
+		}
+	}
+	panic("out of registers")
 }
 
 // buildTree allocates registers and prepares the graph of operations.
@@ -88,6 +93,7 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 		if v, ok := vars[node.Name]; !ok {
 			return nil, fmt.Errorf("undefined variable %s", node.Name)
 		} else {
+			v.Location = getFreeReg(regs)
 			return v, nil
 		}
 	case *ast.ParenExpr:
@@ -109,38 +115,9 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 				left.Type, right.Type, op)
 		}
 		// create a temporary.
-		var tmpLoc string
-	regswitch:
-		switch {
-		case left.Register:
-			// re-use register
-			tmpLoc = left.Location
-		case right.Register:
-			// use right register for commutative operations
-			switch op {
-			case token.ADD, token.MUL, token.AND, token.OR:
-				tmpLoc = right.Location
-				left, right = right, left
-				break regswitch
-			}
-			fallthrough
-		default:
-			// find another one
-			for reg, used := range regs {
-				if !used {
-					tmpLoc = reg
-					regs[reg] = true
-					break
-				}
-			}
-			if tmpLoc == "" {
-				panic("out of registers")
-			}
-		}
 		tmp := &Var{
 			Name:     fmt.Sprintf("__auto_tmp_%03d", nTemps),
-			Location: tmpLoc,
-			Register: true,
+			Location: left.Location,
 			Type:     left.Type,
 			Op:       op,
 			Left:     left,
@@ -168,6 +145,10 @@ func (c *Compiler) Emit(root *Var, w codeWriter) {
 		opcode, _ := c.Arch.Opcode(node.Op, node.Type)
 		seen[node] = true
 		if node.Left == nil {
+			if node.AddrReg != "" {
+				w.opcode("MOVUPS", c.MemLocation(node), node.Location)
+				node.AddrReg = ""
+			}
 			done[node] = true
 			return // a leaf.
 		}
@@ -175,12 +156,7 @@ func (c *Compiler) Emit(root *Var, w codeWriter) {
 		if node.Right != nil {
 			iterate(node.Right)
 		}
-		if node.Left.Register && node.Location == node.Left.Location {
-			w.opcode(opcode, c.Location(node.Right), c.Location(node))
-		} else {
-			w.opcode("MOVUPS", c.Location(node.Left), c.Location(node))
-			w.opcode(opcode, c.Location(node.Right), c.Location(node))
-		}
+		w.opcode(opcode, node.Right.Location, node.Location)
 		done[node] = true
 	}
 	iterate(root)

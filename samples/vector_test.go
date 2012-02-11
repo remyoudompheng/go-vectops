@@ -50,6 +50,19 @@ func TestDiff(t *testing.T) {
 	}
 }
 
+func TestDiffInt(t *testing.T) {
+	a := make([]uint, 257)
+	for i := range a {
+		a[i] = uint(i * i)
+	}
+	c := DiffInt(a)
+	for i, x := range c {
+		if x != a[i]-a[i+1] {
+			t.Errorf("got c[%d] = %d, expected %d", i, x, a[i+1]-a[i])
+		}
+	}
+}
+
 func BenchmarkDiff(b *testing.B) {
 	const length = 1 << 16
 	// a[1:] must have length multiple of 16.
