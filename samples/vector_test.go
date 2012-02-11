@@ -36,6 +36,23 @@ func TestNormF32(t *testing.T) {
 	}
 }
 
+func TestFormula(t *testing.T) {
+	var a, b, c, out [512]float32
+	for i := range out {
+		a[i] = 1 + float32(i)/12
+		b[i] = 1 + float32(i)/4
+		c[i] = 1 + float32(i)/2
+	}
+	SomeFormula(out[:], a[:], b[:], c[:])
+	for i, xout := range out {
+		x, y, z := a[i], b[i], c[i]
+		expect := (x*y + y*z + z*x) / (x*x + y*y + z*z)
+		if xout != expect {
+			t.Errorf("c[%d] = %-1g, expected %-1g", i, xout, expect)
+		}
+	}
+}
+
 func TestDiff(t *testing.T) {
 	a := make([]byte, 512)
 	for i := range a {

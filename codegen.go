@@ -88,9 +88,8 @@ func (f *Function) Compile(w codeWriter) error {
 
 type codeWriter struct{ io.Writer }
 
-func (w codeWriter) comment(s string) {
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "\t// "+s)
+func (w codeWriter) comment(format string, args...interface{}) {
+	fmt.Fprintf(w, "\n\t// "+format+"\n", args...)
 }
 
 func (w codeWriter) opcode(op string, args ...string) {

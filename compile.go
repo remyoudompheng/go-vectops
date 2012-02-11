@@ -11,6 +11,7 @@ type Compiler struct {
 	IndexReg   string
 	PtrRegs    []string
 	VectorRegs []string
+	nTemps     int
 }
 
 // Instantiates a compiling unit for the given arch ('6'),
@@ -74,9 +75,9 @@ func (c *Compiler) Compile(f *Function, w codeWriter) error {
 	return nil
 }
 
-func getFreeReg(regs map[string]bool) string {
-	for reg, used := range regs {
-		if !used {
+func (c *Compiler) getFreeReg(regs map[string]bool) string {
+	for _, reg := range c.VectorRegs {
+		if !regs[reg] {
 			regs[reg] = true
 			return reg
 		}
@@ -87,7 +88,6 @@ func getFreeReg(regs map[string]bool) string {
 // buildTree allocates registers and prepares the graph of operations.
 // Register allocation is greedy.
 func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*Var, error) {
-	nTemps := 0
 	switch node := expr.(type) {
 	case *ast.Ident:
 		if v, ok := vars[node.Name]; !ok {
@@ -116,7 +116,7 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 		}
 		// create a temporary.
 		tmp := &Var{
-			Name:     fmt.Sprintf("__auto_tmp_%03d", nTemps),
+			Name:     fmt.Sprintf("__auto_tmp_%03d", c.nTemps),
 			Location: left.Location,
 			Type:     left.Type,
 			Op:       op,
@@ -124,7 +124,7 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 			Right:    right,
 		}
 		vars[tmp.Name] = tmp
-		nTemps++
+		c.nTemps++
 		return tmp, nil
 	}
 	return nil, fmt.Errorf("cannot handle %s", FormatNode(expr))
@@ -155,6 +155,10 @@ func (c *Compiler) Emit(root *Var, w codeWriter) {
 		iterate(node.Left)
 		if node.Right != nil {
 			iterate(node.Right)
+		}
+		w.comment("%s = %s %s %s", node.Name, node.Left.Name, node.Op, node.Right.Name)
+		if node.Location != node.Left.Location {
+			w.opcode("MOVAPS", node.Left.Location, node.Location)
 		}
 		w.opcode(opcode, node.Right.Location, node.Location)
 		done[node] = true
