@@ -25,12 +25,17 @@ ok2:
     MOVL     $0, CX    // i = 0
 loop:
     CMPL     CX, R12
-    JG       return    // if i > len(out)-4 { return }
+    JLE      process   // if i > len(out)-4 { i = len(out)-4 }
+    MOVL     R12, CX
+process:
     MOVUPS   (R10)(CX*4), X10 // x = in1[i:i+4]
-    PADDL    (R11)(CX*4), X10 // x += in2[i:i+4]
+    MOVUPS   (R11)(CX*4), X11
+    PADDL    X11, X10         // x += in2[i:i+4]
     MOVUPS   X10, (R9)(CX*4)  // out[i:i+4] = x
 
     ADDL     $4, CX   // i += 4
+    CMPL     CX, out+8(FP)
+    JGE      return
     JMP      loop
 
 return:

@@ -37,11 +37,11 @@ func TestNormF32(t *testing.T) {
 }
 
 func TestDiff(t *testing.T) {
-	// 257 is for a[1:] to have length multiple of 16.
-	a := make([]byte, 257)
+	a := make([]byte, 512)
 	for i := range a {
 		a[i] = 'a' + byte(i/10)
 	}
+	// input of substract won't be multiple of 128-bit.
 	c := Diff(a)
 	for i, x := range c {
 		if x != a[i+1]-a[i] {

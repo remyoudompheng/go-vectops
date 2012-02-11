@@ -15,17 +15,15 @@ func (tr Translator) CodeGen(w io.Writer) {
 func (f *Function) CodeGen(w codeWriter) {
 	fmt.Fprintf(w, "// %s\n", f.ForwardDecl())
 	fmt.Fprintf(w, "TEXT ·%s(SB), 7, $0\n", f.Name)
-	f.WritePrologue(w)
-	c := NewCompiler('6')
-	err := c.Compile(f, w)
+	err := f.Compile(w)
 	if err != nil {
 		panic(err)
 	}
-	f.WriteEpilogue(w)
 	fmt.Fprintln(w, "")
 }
 
-func (f *Function) WritePrologue(w codeWriter) {
+func (f *Function) Compile(w codeWriter) error {
+	c := NewCompiler('6')
 	inputRegs := amd64.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
@@ -58,17 +56,34 @@ func (f *Function) WritePrologue(w codeWriter) {
 	w.opcode("CALL", "runtime·panicindex(SB)")
 	w.label(f.Name, "ok")
 
-	// start loop
-	w.opcode("MOVL", "$0", "CX")
+	// Emit code for the loop. It should look like:
+	// for i := 0; ; {
+	// 	if i > length-4 { i = length-4 }
+	// 	process(arrays[i:i+4])
+	// 	i += 4
+	// 	if i >= length { break }
+	// }
+	w.opcode("SUBL", "$4", "DX")
+	w.opcode("XORL", "CX", "CX")
 	w.label(f.Name, "loop")
 	w.opcode("CMPL", "CX", "DX")
-	w.opcode("JGE", f.Name+"·return")
-}
+	w.comment("if i > length-4 { i = length-4 }")
+	w.opcode("JLE", f.Name+"·process")
+	w.opcode("MOVL", "DX", "CX")
+	w.label(f.Name, "process")
 
-func (f *Function) WriteEpilogue(w codeWriter) {
+	err := c.Compile(f, w)
+	if err != nil {
+		return err
+	}
+
+	w.comment("if i >= length { break }")
+	w.opcode("CMPL", "CX", outArg+"+8(FP)")
+	w.opcode("JGE", f.Name+"·return")
 	w.opcode("JMP", f.Name+"·loop")
 	w.label(f.Name, "return")
 	w.opcode("RET")
+	return nil
 }
 
 type codeWriter struct{ io.Writer }

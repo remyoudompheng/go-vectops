@@ -19,10 +19,10 @@ func F(out, in1, in2, in3 []float32) {
 func TestVectorFunc(t *testing.T) {
 	file, _ := parser.ParseFile(token.NewFileSet(), "", "package p; "+testDecl, 0)
 	decl := file.Decls[0].(*ast.FuncDecl)
-	f, ok := IsVectorOp(decl)
+	f, err := IsVectorOp(decl)
 	switch {
-	case !ok:
-		t.Errorf("F should be vectorizable")
+	case err != nil:
+		t.Errorf("F should be vectorizable but %s", err)
 	case !reflect.DeepEqual(f.Args, []string{"out", "in1", "in2", "in3"}):
 		t.Errorf("wrong args for F: got %v", f.Args)
 	case f.ScalarType != "float32":
