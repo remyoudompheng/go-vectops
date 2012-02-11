@@ -56,6 +56,7 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("CALL", "runtime·panicindex(SB)")
 	w.label(f.Name, "ok")
 
+	stride := c.Arch.VectorWidth / c.Arch.Width(f.ScalarType)
 	// Emit code for the loop. It should look like:
 	// for i := 0; ; {
 	// 	if i > length-4 { i = length-4 }
@@ -63,11 +64,11 @@ func (f *Function) Compile(w codeWriter) error {
 	// 	i += 4
 	// 	if i >= length { break }
 	// }
-	w.opcode("SUBL", "$4", "DX")
+	w.opcode("SUBL", fmt.Sprintf("$%d", stride), "DX")
 	w.opcode("XORL", "CX", "CX")
 	w.label(f.Name, "loop")
 	w.opcode("CMPL", "CX", "DX")
-	w.comment("if i > length-4 { i = length-4 }")
+	w.comment("if i > length-%d { i = length-%d }", stride, stride)
 	w.opcode("JLE", f.Name+"·process")
 	w.opcode("MOVL", "DX", "CX")
 	w.label(f.Name, "process")
@@ -77,6 +78,7 @@ func (f *Function) Compile(w codeWriter) error {
 		return err
 	}
 
+	w.opcode("ADDL", fmt.Sprintf("$%d", stride), c.Arch.CounterReg)
 	w.comment("if i >= length { break }")
 	w.opcode("CMPL", "CX", outArg+"+8(FP)")
 	w.opcode("JGE", f.Name+"·return")

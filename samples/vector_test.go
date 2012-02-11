@@ -116,3 +116,21 @@ func BenchmarkDiffNoSIMD(b *testing.B) {
 	}
 	b.SetBytes(length)
 }
+
+func BenchmarkDetF64(bench *testing.B) {
+	var det, a, b, c, d [4096]float64
+	for i := 0; i < bench.N; i++ {
+		DetF64(det[:], a[:], b[:], c[:], d[:])
+	}
+	bench.SetBytes(int64(len(det)) * 8)
+}
+
+func BenchmarkDetF64NoSIMD(bench *testing.B) {
+	var det, a, b, c, d [4096]float64
+	for i := 0; i < bench.N; i++ {
+		for n := range det {
+			det[n] = a[n]*d[n] - b[n]*c[n]
+		}
+	}
+	bench.SetBytes(int64(len(det)) * 8)
+}

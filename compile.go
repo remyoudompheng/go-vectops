@@ -70,8 +70,6 @@ func (c *Compiler) Compile(f *Function, w codeWriter) error {
 	}
 	c.Emit(root, w)
 	w.opcode("MOVUPD", root.Location, c.MemLocation(outv))
-	stride := c.Arch.VectorWidth / c.Arch.Width(f.ScalarType)
-	w.opcode("ADDL", fmt.Sprintf("$%d", stride), c.Arch.CounterReg)
 	return nil
 }
 

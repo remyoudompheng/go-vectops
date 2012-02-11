@@ -32,4 +32,8 @@ func DiffInt(a []uint) []uint {
 	return result
 }
 
+func DetF64(det, a, b, c, d []float64) {
+	det = a*d - b*c
+}
+
 // vim: set ft=go:
