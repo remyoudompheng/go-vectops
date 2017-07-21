@@ -21,10 +21,11 @@ var types = map[string]GoType{
 	"float32": tF32,
 	"float64": tF64,
 	"byte":    tU8,
-	"uint":    tU32,
+	"uint":    tU64,
 }
 
 type Arch struct {
+	PtrSize     int
 	CounterReg  string
 	InputRegs   []string
 	VectorRegs  []string
@@ -60,6 +61,7 @@ type Type struct {
 
 // Description of the amd64 architecture output.
 var amd64 = Arch{
+	PtrSize:    8,
 	CounterReg: "CX",
 	InputRegs: []string{"SI", "DI",
 		"R8", "R9", "R10", "R11",

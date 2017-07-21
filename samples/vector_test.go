@@ -1,4 +1,4 @@
-package vectops
+package samples
 
 import (
 	"testing"
@@ -133,4 +133,39 @@ func BenchmarkDetF64NoSIMD(bench *testing.B) {
 		}
 	}
 	bench.SetBytes(int64(len(det)) * 8)
+}
+
+func BenchmarkNormF32(b *testing.B) {
+	var x, y, z [4096]float32
+	for i := range z {
+		x[i] = float32(i) / 12
+		y[i] = float32((i + 3) / 4)
+	}
+
+	for i := 0; i < b.N; i++ {
+		NormFloat32s(z[:], x[:], y[:])
+	}
+	b.SetBytes(int64(len(z)) * 4)
+}
+
+func BenchmarkNormF32NoSIMD(b *testing.B) {
+	var x, y, z [4096]float32
+	for i := range z {
+		x[i] = float32(i) / 12
+		y[i] = float32((i + 3) / 4)
+	}
+
+	for i := 0; i < b.N; i++ {
+		normF32(z[:], x[:], y[:])
+	}
+	b.SetBytes(int64(len(z)) * 4)
+}
+
+func normF32(c, a, b []float32) {
+	if len(c) != len(a) || len(c) != len(b) {
+		panic("unequal lengths")
+	}
+	for i := range c {
+		c[i] = a[i]*a[i] + b[i]*b[i]
+	}
 }

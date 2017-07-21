@@ -1,4 +1,4 @@
-package vectops
+package samples
 
 func NormFloat32s(out, x, y []float32) {
 	out = x*x + y*y

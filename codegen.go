@@ -22,8 +22,13 @@ func (f *Function) CodeGen(w codeWriter) {
 	fmt.Fprintln(w, "")
 }
 
+func frameArg(name string, offset int) string {
+	return fmt.Sprintf("%s+%d(FP)", name, offset)
+}
+
 func (f *Function) Compile(w codeWriter) error {
 	c := NewCompiler('6')
+	ptrSize := c.Arch.PtrSize
 	inputRegs := amd64.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
@@ -35,10 +40,10 @@ func (f *Function) Compile(w codeWriter) error {
 	if len(inArgs) > len(inputRegs) {
 		panic("not enough registers")
 	}
-	w.opcode("MOVQ", outArg+"+0(FP)", "BX")
+	w.opcode("MOVQ", frameArg(outArg, 0), "BX")
 	for i, arg := range inArgs {
 		w.opcode("MOVQ",
-			fmt.Sprintf("%s+%d(FP)", arg, 16*i+16),
+			frameArg(arg, ptrSize*(3*i+3)),
 			inputRegs[i])
 	}
 
@@ -47,10 +52,10 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("MOVL", outArg+"+8(FP)", "DX")
 	for i, arg := range inArgs {
 		w.opcode("CMPL", "DX",
-			fmt.Sprintf("%s+%d(FP)", arg, 16*i+24))
-		w.opcode("JNE", f.Name+"·panic")
+			frameArg(arg, ptrSize*(3*i+3+1)))
+		w.opcode("JNE", f.Name+"__panic")
 	}
-	w.opcode("JMP", f.Name+"·ok")
+	w.opcode("JMP", f.Name+"__ok")
 	//
 	w.label(f.Name, "panic")
 	w.opcode("CALL", "runtime·panicindex(SB)")
@@ -69,7 +74,7 @@ func (f *Function) Compile(w codeWriter) error {
 	w.label(f.Name, "loop")
 	w.opcode("CMPL", "CX", "DX")
 	w.comment("if i > length-%d { i = length-%d }", stride, stride)
-	w.opcode("JLE", f.Name+"·process")
+	w.opcode("JLE", f.Name+"__process")
 	w.opcode("MOVL", "DX", "CX")
 	w.label(f.Name, "process")
 
@@ -80,9 +85,9 @@ func (f *Function) Compile(w codeWriter) error {
 
 	w.opcode("ADDL", fmt.Sprintf("$%d", stride), c.Arch.CounterReg)
 	w.comment("if i >= length { break }")
-	w.opcode("CMPL", "CX", outArg+"+8(FP)")
-	w.opcode("JGE", f.Name+"·return")
-	w.opcode("JMP", f.Name+"·loop")
+	w.opcode("CMPL", "CX", frameArg(outArg, 2*ptrSize))
+	w.opcode("JGE", f.Name+"__return")
+	w.opcode("JMP", f.Name+"__loop")
 	w.label(f.Name, "return")
 	w.opcode("RET")
 	return nil
@@ -104,5 +109,5 @@ func (w codeWriter) opcode(op string, args ...string) {
 
 func (w codeWriter) label(root, label string) {
 	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, root+"·"+label+":")
+	fmt.Fprintln(w, root+"__"+label+":")
 }

@@ -61,7 +61,7 @@ func (t *Translator) Visit(node ast.Node) ast.Visitor {
 // declaration. A vectorizable function must have the form:
 //
 // 	func Op(out, in1, in2, ..., in_k []type) {
-// 		out = arithExpr(in1, in2, ..., in_k) 
+// 		out = arithExpr(in1, in2, ..., in_k)
 // 	}
 //
 // where arithExpr is a simple arithmetic expression.
