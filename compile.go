@@ -7,6 +7,7 @@ import (
 )
 
 type Compiler struct {
+	GOARCH     string
 	Arch       Arch
 	IndexReg   string
 	PtrRegs    []string
@@ -15,19 +16,28 @@ type Compiler struct {
 
 // Instantiates a compiling unit for the given arch ('6'),
 // with given input/output arguments and registers.
-func NewCompiler(arch byte) *Compiler {
+func NewCompiler(goarch string, goarm string) *Compiler {
 	c := new(Compiler)
-	switch arch {
-	case '6':
-		archInfo := amd64
-		c.Arch = archInfo
-		c.IndexReg = archInfo.CounterReg
-		c.PtrRegs = archInfo.InputRegs
-		c.VectorRegs = archInfo.VectorRegs
+	c.GOARCH = goarch
+	switch goarch {
+	case "amd64":
+		c.Arch = amd64
+	case "arm":
+		switch goarm {
+		case "7":
+			c.Arch = armv7
+		case "8":
+			c.Arch = armv8
+		default:
+			panic("unsupported goarm=" + goarm)
+		}
 	default:
-		err := fmt.Errorf("unsupported arch %q", arch)
+		err := fmt.Errorf("unsupported GOARCH=%q", goarch)
 		panic(err)
 	}
+	c.IndexReg = c.Arch.CounterReg
+	c.PtrRegs = c.Arch.InputRegs
+	c.VectorRegs = c.Arch.VectorRegs
 	return c
 }
 

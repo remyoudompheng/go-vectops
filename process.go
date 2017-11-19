@@ -40,7 +40,8 @@ func (f Function) String() string {
 }
 
 type Translator struct {
-	funcs []*Function
+	GOARCH string
+	funcs  []*Function
 }
 
 // Visit implements the ast.Visitor interface.
@@ -123,16 +124,19 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, err error) {
 // ProcessFile processes an input file and write a go and an assembly
 // source file.
 func ProcessFile(fset *token.FileSet, filename string) (err error) {
+	const GOARCH = "amd64"
 	baseName := filename[:len(filename)-len(".vgo")]
-	goFile := baseName + "_amd64.go"
-	asmFile := baseName + "_amd64.s"
+	goFile := baseName + "_" + GOARCH + ".go"
+	asmFile := baseName + "_" + GOARCH + ".s"
 
 	// Parse and preprocess.
 	goInput, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
 		return
 	}
-	tr := new(Translator)
+	tr := &Translator{
+		GOARCH: GOARCH,
+	}
 	ast.Walk(tr, goInput)
 
 	// Write modified Go file

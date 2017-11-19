@@ -6,9 +6,14 @@ import (
 	"strings"
 )
 
+type codeWriter struct {
+	io.Writer
+	compiler *Compiler
+}
+
 func (tr Translator) CodeGen(w io.Writer) {
 	for _, f := range tr.funcs {
-		f.CodeGen(codeWriter{w})
+		f.CodeGen(codeWriter{w, NewCompiler(tr.GOARCH, "")})
 	}
 }
 
@@ -27,9 +32,9 @@ func frameArg(name string, offset int) string {
 }
 
 func (f *Function) Compile(w codeWriter) error {
-	c := NewCompiler('6')
+	c := w.compiler
 	ptrSize := c.Arch.PtrSize
-	inputRegs := amd64.InputRegs
+	inputRegs := c.Arch.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
 	// DX: length
@@ -92,8 +97,6 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("RET")
 	return nil
 }
-
-type codeWriter struct{ io.Writer }
 
 func (w codeWriter) comment(format string, args ...interface{}) {
 	fmt.Fprintf(w, "\n\t// "+format+"\n", args...)
