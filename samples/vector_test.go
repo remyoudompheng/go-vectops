@@ -1,6 +1,7 @@
 package samples
 
 import (
+	"runtime"
 	"testing"
 )
 
@@ -59,6 +60,9 @@ func TestFormula(t *testing.T) {
 }
 
 func TestDiff(t *testing.T) {
+	if runtime.GOARCH == "arm" {
+		t.Skip("cannot test unaligned accesses")
+	}
 	var a [512]byte
 	for i := range a {
 		a[i] = 'a' + byte(i/10)
@@ -86,6 +90,9 @@ func TestDiffInt(t *testing.T) {
 }
 
 func BenchmarkDiff(b *testing.B) {
+	if runtime.GOARCH == "arm" {
+		b.Skip("cannot test unaligned accesses")
+	}
 	const length = 1 << 16
 	// a[1:] must have length multiple of 16.
 	var a [length]byte
@@ -96,6 +103,9 @@ func BenchmarkDiff(b *testing.B) {
 }
 
 func BenchmarkDiffNoAlloc(b *testing.B) {
+	if runtime.GOARCH == "arm" {
+		b.Skip("cannot test unaligned accesses")
+	}
 	const length = 1 << 16
 	var a [length + 1]byte
 	var out [length]byte
