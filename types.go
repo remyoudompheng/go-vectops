@@ -86,6 +86,8 @@ func FindArch(goarch, goarm string) Arch {
 		switch goarm {
 		case "7":
 			return armv7
+		case "8":
+			return armv8
 		default:
 			panic("unsupported goarm=" + goarm)
 		}
@@ -197,6 +199,21 @@ var armv7 = Arch{
 		"F0", "F1", "F2", "F3", "F4", "F5", "F6", "F7",
 		"F8", "F9", "F10", "F11", "F12", "F13", "F14", "F15"},
 	VectorWidth: 8,
+	Types:       neonTypes,
+}
+
+// ARMv8 in 32-bit mode (Aarch32)
+var armv8 = Arch{
+	PtrSize:    4,
+	UintType:   tU32,
+	CounterReg: "R11",
+	LengthReg:  "R12",
+	InputRegs: []string{
+		"R1", "R2", "R3", "R4",
+		"R5", "R6", "R7", "R8"},
+	VectorRegs: []string{
+		"Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Q7"},
+	VectorWidth: 16, // 128-bit registers on Aarch32
 	Types:       neonTypes,
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 )
 
@@ -184,18 +185,33 @@ func (w codeWriter) emitInstr(ins Instr) {
 		}
 	case "arm":
 		const spareReg = "R0"
-
 		switch ins.Kind {
 		case LOAD:
 			logwidth := w.arch.LogWidth(ins.Var.Type)
 			offset := fmt.Sprintf("%s<<%d", w.arch.CounterReg, logwidth)
 			w.opcode("ADD", offset, ins.Var.AddrReg, spareReg)
-			w.opcode("MOVD", "("+spareReg+")", ins.RegDest)
+			if strings.HasPrefix(ins.RegDest, "Q") {
+				regd := regNr(ins.RegDest) // encoded on bits 22, 15-12
+				regs := regNr(spareReg)
+				enc := assembleNEON("VLDM", false, regs, 4, 2*regd) // 4 = four words
+				fmt.Fprintf(w.w, "\tWORD\t$0x%08x\t// %s %s, %s\n",
+					enc, "VLDMIA", "("+spareReg+")", ins.RegDest)
+			} else {
+				w.opcode("MOVD", "("+spareReg+")", ins.RegDest)
+			}
 		case STORE:
 			logwidth := w.arch.LogWidth(ins.Var.Type)
 			offset := fmt.Sprintf("%s<<%d", w.arch.CounterReg, logwidth)
 			w.opcode("ADD", offset, ins.Var.AddrReg, spareReg)
-			w.opcode("MOVD", ins.RegDest, "("+spareReg+")")
+			if strings.HasPrefix(ins.RegDest, "Q") {
+				regd := regNr(ins.RegDest) // encoded on bits 22, 15-12
+				regs := regNr(spareReg)
+				enc := assembleNEON("VSTM", false, regs, 4, 2*regd) // 4 = four words
+				fmt.Fprintf(w.w, "\tWORD\t$0x%08x\t// %s %s, %s\n",
+					enc, "VSTMIA", "("+spareReg+")", ins.RegDest)
+			} else {
+				w.opcode("MOVD", ins.RegDest, "("+spareReg+")")
+			}
 		case OP:
 			v := ins.Var
 			w.comment("%s = %s %s %s", v.Name, v.Left.Name, v.Op, v.Right.Name)
@@ -247,6 +263,14 @@ func (w codeWriter) label(root, label string) {
 	fmt.Fprintln(w.w, root+"__"+label+":")
 }
 
+func regNr(reg string) int {
+	n, err := strconv.Atoi(reg[1:])
+	if err != nil {
+		panic("invalid register name " + reg)
+	}
+	return n
+}
+
 func assembleNEON(op string, quad bool, reg1, reg2, regdest int) uint32 {
 	tpl := neonTemplates[op]
 	encoded := tpl |
@@ -284,4 +308,7 @@ var neonTemplates = map[string]uint32{
 	"VADD.F32": 0xf2000d00,
 	"VSUB.F32": 0xf2200d00,
 	"VMUL.F32": 0xf3000d10,
+	// Multiple load/store
+	"VLDM": 0xec900b00,
+	"VSTM": 0xec800b00,
 }

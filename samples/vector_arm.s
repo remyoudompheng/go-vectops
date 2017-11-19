@@ -20,33 +20,33 @@ NormFloat32s__panic:
 	B	runtime·panicindex(SB)
 
 NormFloat32s__ok:
-	RSB	$2, R12
+	RSB	$4, R12
 	MOVW	$0, R11
 
 NormFloat32s__loop:
 	CMP	R11, R12
 
-	// if i > length-2 { i = length-2 }
+	// if i > length-4 { i = length-4 }
 	BLE	NormFloat32s__process
 	MOVW	R12, R11
 
 NormFloat32s__process:
 	ADD	R11<<2, R2, R0
-	MOVD	(R0), F0
+	WORD	$0xec900b04	// VLDM (R0), Q0
 
 	// __auto_tmp_000 = x * x
-	WORD	$0xf3002d10	// VMUL.F32 F0, F0, F2
+	WORD	$0xf3004d50	// VMUL.F32 Q0, Q0, Q2
 	ADD	R11<<2, R3, R0
-	MOVD	(R0), F1
+	WORD	$0xec902b04	// VLDM (R0), Q1
 
 	// __auto_tmp_001 = y * y
-	WORD	$0xf3013d11	// VMUL.F32 F1, F1, F3
+	WORD	$0xf3026d52	// VMUL.F32 Q1, Q1, Q3
 
 	// out = __auto_tmp_000 + __auto_tmp_001
-	WORD	$0xf2022d03	// VADD.F32 F2, F3, F2
+	WORD	$0xf2044d46	// VADD.F32 Q2, Q3, Q2
 	ADD	R11<<2, R1, R0
-	MOVD	F2, (R0)
-	ADD	$2, R11
+	WORD	$0xec804b04	// VSTM (R0), Q2
+	ADD	$4, R11
 
 	// if i >= length { break }
 	MOVW	out+4(FP), R0
@@ -79,27 +79,27 @@ AddUints__panic:
 	B	runtime·panicindex(SB)
 
 AddUints__ok:
-	RSB	$2, R12
+	RSB	$4, R12
 	MOVW	$0, R11
 
 AddUints__loop:
 	CMP	R11, R12
 
-	// if i > length-2 { i = length-2 }
+	// if i > length-4 { i = length-4 }
 	BLE	AddUints__process
 	MOVW	R12, R11
 
 AddUints__process:
 	ADD	R11<<2, R2, R0
-	MOVD	(R0), F0
+	WORD	$0xec900b04	// VLDM (R0), Q0
 	ADD	R11<<2, R3, R0
-	MOVD	(R0), F1
+	WORD	$0xec902b04	// VLDM (R0), Q1
 
 	// out = in1 + in2
-	WORD	$0xf2200801	// VADD.I32 F0, F1, F0
+	WORD	$0xf2200842	// VADD.I32 Q0, Q1, Q0
 	ADD	R11<<2, R1, R0
-	MOVD	F0, (R0)
-	ADD	$2, R11
+	WORD	$0xec800b04	// VSTM (R0), Q0
+	ADD	$4, R11
 
 	// if i >= length { break }
 	MOVW	out+4(FP), R0
