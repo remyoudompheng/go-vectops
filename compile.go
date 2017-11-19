@@ -40,6 +40,22 @@ const (
 	OP
 )
 
+func (ins Instr) String() string {
+	switch ins.Kind {
+	case LOAD:
+		return fmt.Sprintf("LOAD %s+%s(*), %s",
+			ins.Var.Name, ins.Var.AddrReg, ins.RegDest)
+	case STORE:
+		return fmt.Sprintf("STORE %s, %s+%s(*)",
+			ins.RegDest, ins.Var.Name, ins.Var.AddrReg)
+	case OP:
+		return fmt.Sprintf("OP%s %s, %s, %s",
+			ins.Op, ins.RegLeft, ins.RegRight, ins.RegDest)
+	default:
+		panic("impossible")
+	}
+}
+
 func Compile(f *Function, w codeWriter) ([]Instr, error) {
 	c := &Compiler{
 		PtrRegs:    w.arch.InputRegs,

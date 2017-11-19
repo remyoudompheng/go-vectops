@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"testing"
 )
 
@@ -15,9 +14,12 @@ func TestCompile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not check %s", FormatNode(decl))
 	}
-	c := NewCompiler('6')
-	err = c.Compile(f, codeWriter{os.Stderr})
+	w := codeWriter{arch: amd64}
+	instrs, err := Compile(f, w)
 	if err != nil {
 		t.Error(err)
+	}
+	for _, ins := range instrs {
+		t.Log(ins)
 	}
 }
