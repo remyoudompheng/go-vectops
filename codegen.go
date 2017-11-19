@@ -32,6 +32,9 @@ func frameArg(name string, offset int) string {
 }
 
 func (f *Function) Compile(w codeWriter) error {
+	if w.arch.Width(f.ScalarType) == 0 {
+		return fmt.Errorf("unsupported data type %s", f.ScalarType)
+	}
 	ptrSize := w.arch.PtrSize
 	inputRegs := w.arch.InputRegs
 	// BX: pointer to output slice

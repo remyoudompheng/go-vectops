@@ -8,7 +8,8 @@ import (
 type GoType uint
 
 const (
-	tU8 GoType = iota
+	tUndefined GoType = iota
+	tU8
 	tU16
 	tU32
 	tU64
@@ -22,11 +23,11 @@ var types = map[string]GoType{
 	"float32": tF32,
 	"float64": tF64,
 	"byte":    tU8,
-	"uint":    tU64,
 }
 
 type Arch struct {
 	PtrSize     int
+	UintType    GoType // the type of unsized uint
 	CounterReg  string
 	InputRegs   []string
 	VectorRegs  []string
@@ -35,7 +36,11 @@ type Arch struct {
 }
 
 func (a *Arch) Opcode(op token.Token, typename string) (opcode string, ok bool) {
-	if t, ok := a.Types[types[typename]]; ok {
+	typ := types[typename]
+	if typename == "uint" {
+		typ = a.UintType
+	}
+	if t, ok := a.Types[typ]; ok {
 		op, ok := t.Ops[op]
 		return op, ok
 	}
@@ -51,7 +56,11 @@ func IsCommutative(op token.Token) bool {
 }
 
 func (a *Arch) Width(typename string) int {
-	return a.Types[types[typename]].Size
+	typ := types[typename]
+	if typename == "uint" {
+		typ = a.UintType
+	}
+	return a.Types[typ].Size
 }
 
 type Type struct {
@@ -73,6 +82,7 @@ func FindArch(goarch, goarm string) Arch {
 // Description of the amd64 architecture output.
 var amd64 = Arch{
 	PtrSize:    8,
+	UintType:   tU64,
 	CounterReg: "CX",
 	InputRegs: []string{"SI", "DI",
 		"R8", "R9", "R10", "R11",

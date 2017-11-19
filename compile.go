@@ -11,6 +11,7 @@ type Compiler struct {
 	IndexReg   string
 	PtrRegs    []string
 	VectorRegs []string
+	Vars       map[string]*Var
 }
 
 type Var struct {
@@ -36,23 +37,23 @@ func Compile(f *Function, w codeWriter) error {
 		IndexReg:   w.arch.CounterReg,
 		PtrRegs:    w.arch.InputRegs,
 		VectorRegs: w.arch.VectorRegs,
+		Vars:       make(map[string]*Var),
 	}
-	vars := make(Tree, len(f.Args))
 	outv := &Var{Name: f.Args[0],
 		AddrReg: "BX",
 		Type:    f.ScalarType}
-	vars[outv.Name] = outv
+	c.Vars[outv.Name] = outv
 	for i, inname := range f.Args[1:] {
 		inv := &Var{Name: inname,
 			AddrReg: c.PtrRegs[i],
 			Type:    f.ScalarType}
-		vars[inv.Name] = inv
+		c.Vars[inv.Name] = inv
 	}
 	usedregs := map[string]bool{}
 	for _, reg := range c.VectorRegs {
 		usedregs[reg] = false
 	}
-	root, err := c.buildTree(f.Formula, vars, usedregs)
+	root, err := c.buildTree(f.Formula, usedregs)
 	if err != nil {
 		return err
 	}
@@ -74,14 +75,14 @@ func (c *Compiler) getFreeReg(regs map[string]bool) string {
 
 // buildTree allocates registers and prepares the graph of operations.
 // Register allocation is greedy.
-func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*Var, error) {
+func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) {
 	var pass1 func(ast.Expr) error
 	var pass2 func(ast.Expr) (*Var, error)
 	// Pass 1 allocates registers for input array elements.
 	pass1 = func(e ast.Expr) error {
 		switch node := e.(type) {
 		case *ast.Ident:
-			if v, ok := vars[node.Name]; !ok {
+			if v, ok := c.Vars[node.Name]; !ok {
 				return fmt.Errorf("undefined variable %s", node.Name)
 			} else {
 				if v.Location != "" {
@@ -109,7 +110,7 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 	pass2 = func(e ast.Expr) (*Var, error) {
 		switch node := e.(type) {
 		case *ast.Ident:
-			return vars[node.Name], nil
+			return c.Vars[node.Name], nil
 		case *ast.ParenExpr:
 			return pass2(node.X)
 		case *ast.BinaryExpr:
@@ -144,7 +145,7 @@ func (c *Compiler) buildTree(expr ast.Expr, vars Tree, regs map[string]bool) (*V
 				// must allocate a register
 				tmp.Location = c.getFreeReg(regs)
 			}
-			vars[tmp.Name] = tmp
+			c.Vars[tmp.Name] = tmp
 			nTemps++
 			return tmp, nil
 		}

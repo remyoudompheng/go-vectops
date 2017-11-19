@@ -86,7 +86,7 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, err error) {
 			return nil, fmt.Errorf("unsupported type %s", FormatNode(paramType))
 		} else {
 			// an identifier
-			if _, ok := types[ident.Name]; ok {
+			if _, ok := types[ident.Name]; ok || ident.Name == "uint" {
 				scalarType = ident.Name
 			} else {
 				return nil, fmt.Errorf("unsupported type %s", FormatNode(paramType))
