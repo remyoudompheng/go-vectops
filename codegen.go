@@ -11,20 +11,15 @@ type codeWriter struct {
 	arch Arch
 }
 
-func (tr Translator) CodeGen(w io.Writer) {
-	for _, f := range tr.funcs {
-		f.CodeGen(codeWriter{w, tr.arch})
-	}
-}
-
-func (f *Function) CodeGen(w codeWriter) {
+func (w codeWriter) CodeGen(f *Function) error {
 	fmt.Fprintf(w.w, "// %s\n", f.ForwardDecl())
 	fmt.Fprintf(w.w, "TEXT ·%s(SB), 7, $0\n", f.Name)
 	err := f.Compile(w)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Fprintln(w.w, "")
+	return nil
 }
 
 func frameArg(name string, offset int) string {
@@ -35,8 +30,17 @@ func (f *Function) Compile(w codeWriter) error {
 	if w.arch.Width(f.ScalarType) == 0 {
 		return fmt.Errorf("unsupported data type %s", f.ScalarType)
 	}
+	instrs, err := Compile(f, w)
+	if err != nil {
+		return err
+	}
+	for _, ins := range instrs {
+		if err := w.checkInstr(ins); err != nil {
+			return err
+		}
+	}
+
 	ptrSize := w.arch.PtrSize
-	inputRegs := w.arch.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
 	// DX: length
@@ -44,14 +48,13 @@ func (f *Function) Compile(w codeWriter) error {
 	w.comment("Load pointers.")
 	outArg := f.Args[0]
 	inArgs := f.Args[1:]
-	if len(inArgs) > len(inputRegs) {
+	if len(inArgs) > len(w.arch.InputRegs) {
 		panic("not enough registers")
 	}
-	w.opcode("MOVQ", frameArg(outArg, 0), "BX")
-	for i, arg := range inArgs {
+	for i, arg := range f.Args {
 		w.opcode("MOVQ",
-			frameArg(arg, ptrSize*(3*i+3)),
-			inputRegs[i])
+			frameArg(arg, ptrSize*(3*i)),
+			w.arch.InputRegs[i])
 	}
 
 	// length and index.
@@ -85,9 +88,8 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("MOVQ", "DX", "CX")
 	w.label(f.Name, "process")
 
-	err := Compile(f, w)
-	if err != nil {
-		return err
+	for _, ins := range instrs {
+		w.emitInstr(ins)
 	}
 
 	w.opcode("ADDQ", fmt.Sprintf("$%d", stride), w.arch.CounterReg)
@@ -98,6 +100,53 @@ func (f *Function) Compile(w codeWriter) error {
 	w.label(f.Name, "return")
 	w.opcode("RET")
 	return nil
+}
+
+func (w codeWriter) checkInstr(ins Instr) error {
+	if w.arch.Width(ins.Var.Type) == 0 {
+		return fmt.Errorf("unsupported type %s on architecture", ins.Var.Type)
+	}
+	if ins.Kind == OP {
+		_, ok := w.arch.Opcode(ins.Op, ins.Var.Type)
+		if !ok {
+			return fmt.Errorf("no instruction for %s%s%s",
+				ins.Var.Type, ins.Op, ins.Var.Type)
+		}
+	}
+	return nil
+}
+
+func (w codeWriter) emitInstr(ins Instr) {
+	if true {
+		// amd64
+		switch ins.Kind {
+		case LOAD:
+			width := w.arch.Width(ins.Var.Type)
+			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
+				w.arch.CounterReg, width)
+			w.opcode("MOVUPS", loc, ins.RegDest)
+		case STORE:
+			width := w.arch.Width(ins.Var.Type)
+			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
+				w.arch.CounterReg, width)
+			w.opcode("MOVUPD", ins.RegDest, loc)
+		case OP:
+			v := ins.Var
+			w.comment("%s = %s %s %s", v.Name, v.Left.Name, v.Op, v.Right.Name)
+			opcode, ok := w.arch.Opcode(ins.Op, v.Type)
+			if !ok {
+				panic("unsupported operation")
+			}
+			if ins.RegDest == ins.RegLeft {
+				w.opcode(opcode, ins.RegRight, ins.RegLeft)
+			} else {
+				w.opcode("MOVAPS", ins.RegLeft, ins.RegDest)
+				w.opcode(opcode, ins.RegRight, ins.RegDest)
+			}
+		}
+	} else {
+		panic("not implemented")
+	}
 }
 
 func (w codeWriter) comment(format string, args ...interface{}) {

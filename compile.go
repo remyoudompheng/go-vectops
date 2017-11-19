@@ -7,8 +7,6 @@ import (
 )
 
 type Compiler struct {
-	Arch       Arch
-	IndexReg   string
 	PtrRegs    []string
 	VectorRegs []string
 	Vars       map[string]*Var
@@ -25,29 +23,34 @@ type Var struct {
 	Right    *Var
 }
 
-type Tree map[string]*Var
-
-func (c *Compiler) MemLocation(v *Var) string {
-	return fmt.Sprintf("(%s)(%s*%d)", v.AddrReg, c.IndexReg, c.Arch.Width(v.Type))
+type Instr struct {
+	Kind    int
+	RegDest string
+	// For LOAD, STORE
+	Var *Var
+	// For OP
+	Op       token.Token
+	RegLeft  string
+	RegRight string
 }
 
-func Compile(f *Function, w codeWriter) error {
+const (
+	LOAD = iota
+	STORE
+	OP
+)
+
+func Compile(f *Function, w codeWriter) ([]Instr, error) {
 	c := &Compiler{
-		Arch:       w.arch,
-		IndexReg:   w.arch.CounterReg,
 		PtrRegs:    w.arch.InputRegs,
 		VectorRegs: w.arch.VectorRegs,
 		Vars:       make(map[string]*Var),
 	}
-	outv := &Var{Name: f.Args[0],
-		AddrReg: "BX",
-		Type:    f.ScalarType}
-	c.Vars[outv.Name] = outv
-	for i, inname := range f.Args[1:] {
-		inv := &Var{Name: inname,
+	for i, name := range f.Args {
+		v := &Var{Name: name,
 			AddrReg: c.PtrRegs[i],
 			Type:    f.ScalarType}
-		c.Vars[inv.Name] = inv
+		c.Vars[v.Name] = v
 	}
 	usedregs := map[string]bool{}
 	for _, reg := range c.VectorRegs {
@@ -55,11 +58,17 @@ func Compile(f *Function, w codeWriter) error {
 	}
 	root, err := c.buildTree(f.Formula, usedregs)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.Emit(root, w)
-	w.opcode("MOVUPD", root.Location, c.MemLocation(outv))
-	return nil
+	// root is actually f.Args[0]
+	outvar := *root
+	delete(c.Vars, root.Name)
+	outvar.Name = f.Args[0]
+	outvar.AddrReg = w.arch.InputRegs[0]
+	root = &outvar
+	c.Vars[outvar.Name] = root
+	instrs := c.Emit(root)
+	return instrs, nil
 }
 
 func (c *Compiler) getFreeReg(regs map[string]bool) string {
@@ -123,12 +132,6 @@ func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) 
 			if err != nil {
 				return nil, err
 			}
-			// check op
-			_, ok := c.Arch.Opcode(op, left.Type)
-			if !ok {
-				return nil, fmt.Errorf("incompatible types %s and %s for op %s",
-					left.Type, right.Type, op)
-			}
 			// create a temporary.
 			if left.ReadOnly && !right.ReadOnly && IsCommutative(op) {
 				left, right = right, left
@@ -160,7 +163,8 @@ func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) 
 	return pass2(expr)
 }
 
-func (c *Compiler) Emit(root *Var, w codeWriter) {
+func (c *Compiler) Emit(root *Var) []Instr {
+	var instrs []Instr
 	seen := make(map[*Var]bool)
 	done := make(map[*Var]bool)
 	var iterate func(node *Var)
@@ -172,13 +176,14 @@ func (c *Compiler) Emit(root *Var, w codeWriter) {
 			err := fmt.Errorf("loop detected in optree for %s", node.Name)
 			panic(err)
 		}
-		opcode, _ := c.Arch.Opcode(node.Op, node.Type)
 		seen[node] = true
 		if node.Left == nil {
-			if node.AddrReg != "" {
-				w.opcode("MOVUPS", c.MemLocation(node), node.Location)
-				node.AddrReg = ""
+			if node.AddrReg == "" {
+				// A leaf necessarily comes from memory.
+				panic("impossible")
 			}
+			instr := Instr{Kind: LOAD, Var: node, RegDest: node.Location}
+			instrs = append(instrs, instr)
 			done[node] = true
 			return // a leaf.
 		}
@@ -186,12 +191,16 @@ func (c *Compiler) Emit(root *Var, w codeWriter) {
 		if node.Right != nil {
 			iterate(node.Right)
 		}
-		w.comment("%s = %s %s %s", node.Name, node.Left.Name, node.Op, node.Right.Name)
-		if node.Location != node.Left.Location {
-			w.opcode("MOVAPS", node.Left.Location, node.Location)
+		instr := Instr{Kind: OP, Op: node.Op, Var: node,
+			RegLeft:  node.Left.Location,
+			RegRight: node.Right.Location,
+			RegDest:  node.Location,
 		}
-		w.opcode(opcode, node.Right.Location, node.Location)
+		instrs = append(instrs, instr)
 		done[node] = true
 	}
 	iterate(root)
+	instrs = append(instrs,
+		Instr{Kind: STORE, Var: root, RegDest: root.Location})
+	return instrs
 }

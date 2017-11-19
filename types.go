@@ -84,7 +84,7 @@ var amd64 = Arch{
 	PtrSize:    8,
 	UintType:   tU64,
 	CounterReg: "CX",
-	InputRegs: []string{"SI", "DI",
+	InputRegs: []string{"BX", "SI", "DI",
 		"R8", "R9", "R10", "R11",
 		"R12", "R13", "R14", "R15"},
 	VectorRegs: []string{

@@ -40,7 +40,7 @@ NormFloat32s__process:
 	MOVAPS	X1, X4
 	MULPS	X1, X4
 
-	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
+	// out = __auto_tmp_000 + __auto_tmp_001
 	ADDPS	X4, X2
 	MOVUPD	X2, (BX)(CX*4)
 	ADDQ	$4, CX
@@ -87,7 +87,7 @@ AddUints__process:
 	MOVUPS	(SI)(CX*8), X0
 	MOVUPS	(DI)(CX*8), X1
 
-	// __auto_tmp_000 = in1 + in2
+	// out = in1 + in2
 	PADDQ	X1, X0
 	MOVUPD	X0, (BX)(CX*8)
 	ADDQ	$2, CX
@@ -174,7 +174,7 @@ SomeFormula__process:
 	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
 	ADDPS	X9, X7
 
-	// __auto_tmp_010 = __auto_tmp_004 / __auto_tmp_009
+	// out = __auto_tmp_004 / __auto_tmp_009
 	DIVPS	X7, X4
 	MOVUPD	X4, (BX)(CX*4)
 	ADDQ	$4, CX
@@ -221,7 +221,7 @@ subByte__process:
 	MOVUPS	(SI)(CX*1), X0
 	MOVUPS	(DI)(CX*1), X1
 
-	// __auto_tmp_000 = a - b
+	// out = a - b
 	PSUBB	X1, X0
 	MOVUPD	X0, (BX)(CX*1)
 	ADDQ	$16, CX
@@ -268,7 +268,7 @@ subuint__process:
 	MOVUPS	(SI)(CX*8), X0
 	MOVUPS	(DI)(CX*8), X1
 
-	// __auto_tmp_000 = a - b
+	// out = a - b
 	PSUBQ	X1, X0
 	MOVUPD	X0, (BX)(CX*8)
 	ADDQ	$2, CX
@@ -329,7 +329,7 @@ DetF64__process:
 	// __auto_tmp_001 = b * c
 	MULPD	X4, X2
 
-	// __auto_tmp_002 = __auto_tmp_000 - __auto_tmp_001
+	// det = __auto_tmp_000 - __auto_tmp_001
 	SUBPD	X2, X0
 	MOVUPD	X0, (BX)(CX*8)
 	ADDQ	$2, CX

@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io/ioutil"
 	"os"
 )
 
@@ -142,14 +143,20 @@ func (t *Translator) ProcessFile(filename string) (err error) {
 	}
 
 	// Write assembly.
-	asmF, err := os.Create(asmFile)
-	if err != nil {
-		return fmt.Errorf("error creating %s: %s", goFile, err)
+	asmBuf := new(bytes.Buffer)
+	w := codeWriter{
+		w:    asmBuf,
+		arch: t.arch,
 	}
-	t.CodeGen(asmF)
-	err = asmF.Close()
+	for _, f := range t.funcs {
+		err = w.CodeGen(f)
+		if err != nil {
+			return err
+		}
+	}
+	err = ioutil.WriteFile(asmFile, asmBuf.Bytes(), 0644)
 	if err != nil {
-		return fmt.Errorf("error creating %s: %s", goFile, err)
+		return fmt.Errorf("error creating %s: %s", asmFile, err)
 	}
 	return nil
 }
