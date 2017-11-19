@@ -7,38 +7,10 @@ import (
 )
 
 type Compiler struct {
-	GOARCH     string
 	Arch       Arch
 	IndexReg   string
 	PtrRegs    []string
 	VectorRegs []string
-}
-
-// Instantiates a compiling unit for the given arch ('6'),
-// with given input/output arguments and registers.
-func NewCompiler(goarch string, goarm string) *Compiler {
-	c := new(Compiler)
-	c.GOARCH = goarch
-	switch goarch {
-	case "amd64":
-		c.Arch = amd64
-	case "arm":
-		switch goarm {
-		case "7":
-			c.Arch = armv7
-		case "8":
-			c.Arch = armv8
-		default:
-			panic("unsupported goarm=" + goarm)
-		}
-	default:
-		err := fmt.Errorf("unsupported GOARCH=%q", goarch)
-		panic(err)
-	}
-	c.IndexReg = c.Arch.CounterReg
-	c.PtrRegs = c.Arch.InputRegs
-	c.VectorRegs = c.Arch.VectorRegs
-	return c
 }
 
 type Var struct {
@@ -58,7 +30,13 @@ func (c *Compiler) MemLocation(v *Var) string {
 	return fmt.Sprintf("(%s)(%s*%d)", v.AddrReg, c.IndexReg, c.Arch.Width(v.Type))
 }
 
-func (c *Compiler) Compile(f *Function, w codeWriter) error {
+func Compile(f *Function, w codeWriter) error {
+	c := &Compiler{
+		Arch:       w.arch,
+		IndexReg:   w.arch.CounterReg,
+		PtrRegs:    w.arch.InputRegs,
+		VectorRegs: w.arch.VectorRegs,
+	}
 	vars := make(Tree, len(f.Args))
 	outv := &Var{Name: f.Args[0],
 		AddrReg: "BX",

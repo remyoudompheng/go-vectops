@@ -7,24 +7,24 @@ import (
 )
 
 type codeWriter struct {
-	io.Writer
-	compiler *Compiler
+	w    io.Writer
+	arch Arch
 }
 
 func (tr Translator) CodeGen(w io.Writer) {
 	for _, f := range tr.funcs {
-		f.CodeGen(codeWriter{w, NewCompiler(tr.GOARCH, "")})
+		f.CodeGen(codeWriter{w, tr.arch})
 	}
 }
 
 func (f *Function) CodeGen(w codeWriter) {
-	fmt.Fprintf(w, "// %s\n", f.ForwardDecl())
-	fmt.Fprintf(w, "TEXT ·%s(SB), 7, $0\n", f.Name)
+	fmt.Fprintf(w.w, "// %s\n", f.ForwardDecl())
+	fmt.Fprintf(w.w, "TEXT ·%s(SB), 7, $0\n", f.Name)
 	err := f.Compile(w)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Fprintln(w, "")
+	fmt.Fprintln(w.w, "")
 }
 
 func frameArg(name string, offset int) string {
@@ -32,9 +32,8 @@ func frameArg(name string, offset int) string {
 }
 
 func (f *Function) Compile(w codeWriter) error {
-	c := w.compiler
-	ptrSize := c.Arch.PtrSize
-	inputRegs := c.Arch.InputRegs
+	ptrSize := w.arch.PtrSize
+	inputRegs := w.arch.InputRegs
 	// BX: pointer to output slice
 	// CX: index counter.
 	// DX: length
@@ -66,7 +65,7 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("CALL", "runtime·panicindex(SB)")
 	w.label(f.Name, "ok")
 
-	stride := c.Arch.VectorWidth / c.Arch.Width(f.ScalarType)
+	stride := w.arch.VectorWidth / w.arch.Width(f.ScalarType)
 	// Emit code for the loop. It should look like:
 	// for i := 0; ; {
 	// 	if i > length-4 { i = length-4 }
@@ -83,12 +82,12 @@ func (f *Function) Compile(w codeWriter) error {
 	w.opcode("MOVQ", "DX", "CX")
 	w.label(f.Name, "process")
 
-	err := c.Compile(f, w)
+	err := Compile(f, w)
 	if err != nil {
 		return err
 	}
 
-	w.opcode("ADDQ", fmt.Sprintf("$%d", stride), c.Arch.CounterReg)
+	w.opcode("ADDQ", fmt.Sprintf("$%d", stride), w.arch.CounterReg)
 	w.comment("if i >= length { break }")
 	w.opcode("CMPQ", "CX", frameArg(outArg, 2*ptrSize))
 	w.opcode("JGE", f.Name+"__return")
@@ -99,18 +98,18 @@ func (f *Function) Compile(w codeWriter) error {
 }
 
 func (w codeWriter) comment(format string, args ...interface{}) {
-	fmt.Fprintf(w, "\n\t// "+format+"\n", args...)
+	fmt.Fprintf(w.w, "\n\t// "+format+"\n", args...)
 }
 
 func (w codeWriter) opcode(op string, args ...string) {
 	if len(args) > 0 {
-		fmt.Fprintf(w, "\t%s\t%s\n", op, strings.Join(args, ", "))
+		fmt.Fprintf(w.w, "\t%s\t%s\n", op, strings.Join(args, ", "))
 	} else {
-		fmt.Fprintf(w, "\t%s\n", op)
+		fmt.Fprintf(w.w, "\t%s\n", op)
 	}
 }
 
 func (w codeWriter) label(root, label string) {
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, root+"__"+label+":")
+	fmt.Fprintln(w.w, "")
+	fmt.Fprintln(w.w, root+"__"+label+":")
 }

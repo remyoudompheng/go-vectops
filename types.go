@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"go/token"
 )
 
@@ -57,6 +58,16 @@ type Type struct {
 	Size    int
 	LogSize int // Size = 1 << LogSize
 	Ops     map[token.Token]string
+}
+
+func FindArch(goarch, goarm string) Arch {
+	switch goarch {
+	case "amd64":
+		return amd64
+	default:
+		err := fmt.Errorf("unsupported GOARCH=%q", goarch)
+		panic(err)
+	}
 }
 
 // Description of the amd64 architecture output.

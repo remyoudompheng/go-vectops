@@ -39,11 +39,6 @@ func (f Function) String() string {
 		f.Name, f.Args, f.ScalarType, buf.Bytes())
 }
 
-type Translator struct {
-	GOARCH string
-	funcs  []*Function
-}
-
 // Visit implements the ast.Visitor interface.
 func (t *Translator) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
@@ -123,36 +118,38 @@ func IsVectorOp(decl *ast.FuncDecl) (f *Function, err error) {
 
 // ProcessFile processes an input file and write a go and an assembly
 // source file.
-func ProcessFile(fset *token.FileSet, filename string) (err error) {
-	const GOARCH = "amd64"
+func (t *Translator) ProcessFile(filename string) (err error) {
 	baseName := filename[:len(filename)-len(".vgo")]
-	goFile := baseName + "_" + GOARCH + ".go"
-	asmFile := baseName + "_" + GOARCH + ".s"
+	goFile := baseName + "_" + t.goarch + ".go"
+	asmFile := baseName + "_" + t.goarch + ".s"
 
 	// Parse and preprocess.
-	goInput, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	goInput, err := parser.ParseFile(t.fset, filename, nil, parser.ParseComments)
 	if err != nil {
 		return
 	}
-	tr := &Translator{
-		GOARCH: GOARCH,
-	}
-	ast.Walk(tr, goInput)
+	ast.Walk(t, goInput)
 
 	// Write modified Go file
 	goF, err := os.Create(goFile)
 	if err != nil {
 		return fmt.Errorf("error creating %s: %s", goFile, err)
 	}
-	defer goF.Close()
-	printconfig.Fprint(goF, fset, goInput)
+	printconfig.Fprint(goF, t.fset, goInput)
+	err = goF.Close()
+	if err != nil {
+		return fmt.Errorf("error creating %s: %s", goFile, err)
+	}
 
 	// Write assembly.
 	asmF, err := os.Create(asmFile)
 	if err != nil {
 		return fmt.Errorf("error creating %s: %s", goFile, err)
 	}
-	defer asmF.Close()
-	tr.CodeGen(asmF)
-	return
+	t.CodeGen(asmF)
+	err = asmF.Close()
+	if err != nil {
+		return fmt.Errorf("error creating %s: %s", goFile, err)
+	}
+	return nil
 }
