@@ -24,15 +24,15 @@ func FormatNode(node ast.Node) string {
 
 func main() {
 	goarch := runtime.GOARCH
-	goarm := "8"
+	gosubarch := ""
 	if s := os.Getenv("GOARCH"); s != "" {
 		goarch = s
 	}
-	if s := os.Getenv("GOARM"); s != "" {
-		goarm = s
+	if s := os.Getenv("GOSUBARCH"); s != "" {
+		gosubarch = s
 	}
 
-	tr := NewTranslator(goarch, goarm)
+	tr := NewTranslator(goarch, gosubarch)
 	files, _ := filepath.Glob("*.vgo")
 	for _, file := range files {
 		err := tr.ProcessFile(file)
@@ -43,18 +43,18 @@ func main() {
 }
 
 type Translator struct {
-	fset   *token.FileSet
-	goarch string
-	goarm  string
-	arch   Arch
-	funcs  []*Function
+	fset      *token.FileSet
+	goarch    string
+	gosubarch string
+	arch      Arch
+	funcs     []*Function
 }
 
-func NewTranslator(goarch, goarm string) *Translator {
+func NewTranslator(goarch, gosubarch string) *Translator {
 	return &Translator{
-		fset:   token.NewFileSet(),
-		goarch: goarch,
-		goarm:  goarm,
-		arch:   FindArch(goarch, goarm),
+		fset:      token.NewFileSet(),
+		goarch:    goarch,
+		gosubarch: gosubarch,
+		arch:      FindArch(goarch, gosubarch),
 	}
 }

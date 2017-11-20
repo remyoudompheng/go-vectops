@@ -95,9 +95,12 @@ type Type struct {
 	Ops     map[Op]string
 }
 
-func FindArch(goarch, goarm string) Arch {
+func FindArch(goarch, gosubarch string) Arch {
 	switch goarch {
 	case "amd64":
+		if gosubarch == "avx2" {
+			return avx2
+		}
 		return amd64
 	case "arm":
 		return armv7
@@ -190,6 +193,93 @@ var amd64 = Arch{
 				MUL: "MULPD",
 				SUB: "SUBPD",
 				DIV: "DIVPD",
+			},
+		},
+	},
+}
+
+var avx2 = Arch{
+	PtrSize:    8,
+	UintType:   tU64,
+	CounterReg: "CX",
+	LengthReg:  "DX",
+	InputRegs: []string{"BX", "SI", "DI",
+		"R8", "R9", "R10", "R11",
+		"R12", "R13", "R14", "R15"},
+	VectorRegs: []string{
+		"Y0", "Y1", "Y2", "Y4", "Y5", "Y6", "Y7",
+		"Y8", "Y9", "Y10", "Y11", "Y12", "Y13", "Y14", "Y15"},
+	VectorWidth: 32, // 256-bit AVX registers
+	Types: map[GoType]Type{
+		tU8: Type{
+			Size:    1,
+			LogSize: 0,
+			Ops: map[Op]string{
+				ADD: "VPADDB",
+				SUB: "VPSUBB",
+				AND: "VPAND",
+				OR:  "VPOR",
+				XOR: "VPXOR",
+			},
+		},
+		tU16: Type{
+			Size:    2,
+			LogSize: 1,
+			Ops: map[Op]string{
+				ADD: "VPADDW",
+				MUL: "VPMULLW",
+				SUB: "VPSUBW",
+				AND: "VPAND",
+				OR:  "VPOR",
+				XOR: "VPXOR",
+				SHL: "VPSLLW",
+				SHR: "VPSRLW",
+			},
+		},
+		tU32: Type{
+			Size:    4,
+			LogSize: 2,
+			Ops: map[Op]string{
+				ADD: "VPADDL",
+				SUB: "VPSUBL",
+				AND: "VPAND",
+				OR:  "VPOR",
+				XOR: "VPXOR",
+				SHL: "VPSLLL",
+				SHR: "VPSRLL",
+			},
+		},
+		tU64: Type{
+			Size:    8,
+			LogSize: 3,
+			Ops: map[Op]string{
+				ADD: "VPADDQ",
+				SUB: "VPSUBQ",
+				AND: "VPAND",
+				OR:  "VPOR",
+				XOR: "VPXOR",
+				SHL: "VPSLLQ",
+				SHR: "VPSRLQ",
+			},
+		},
+		tF32: Type{
+			Size:    4,
+			LogSize: 2,
+			Ops: map[Op]string{
+				ADD: "VADDPS",
+				MUL: "VMULPS",
+				SUB: "VSUBPS",
+				DIV: "VDIVPS",
+			},
+		},
+		tF64: Type{
+			Size:    8,
+			LogSize: 3,
+			Ops: map[Op]string{
+				ADD: "VADDPD",
+				MUL: "VMULPD",
+				SUB: "VSUBPD",
+				DIV: "VDIVPD",
 			},
 		},
 	},

@@ -1,3 +1,5 @@
+// +build sse2
+
 // func NormFloat32s(out, x, y []float32)
 TEXT ·NormFloat32s(SB), 7, $0
 

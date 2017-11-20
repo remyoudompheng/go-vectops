@@ -145,9 +145,10 @@ func (t *Translator) ProcessFile(filename string) (err error) {
 	// Write assembly.
 	asmBuf := new(bytes.Buffer)
 	w := codeWriter{
-		w:      asmBuf,
-		goarch: t.goarch,
-		arch:   t.arch,
+		w:         asmBuf,
+		goarch:    t.goarch,
+		gosubarch: t.gosubarch,
+		arch:      t.arch,
 	}
 	for _, f := range t.funcs {
 		err = w.CodeGen(f)

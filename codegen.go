@@ -8,9 +8,10 @@ import (
 )
 
 type codeWriter struct {
-	w      io.Writer
-	goarch string
-	arch   Arch
+	w         io.Writer
+	goarch    string
+	gosubarch string
+	arch      Arch
 }
 
 func (w codeWriter) CodeGen(f *Function) error {
@@ -163,12 +164,20 @@ func (w codeWriter) emitInstr(ins Instr) {
 			width := w.arch.Width(ins.Var.Type)
 			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
 				w.arch.CounterReg, width)
-			w.opcode("MOVUPS", loc, ins.RegDest)
+			if w.gosubarch == "avx2" {
+				w.opcode("VMOVDQU", loc, ins.RegDest)
+			} else {
+				w.opcode("MOVUPS", loc, ins.RegDest)
+			}
 		case STORE:
 			width := w.arch.Width(ins.Var.Type)
 			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
 				w.arch.CounterReg, width)
-			w.opcode("MOVUPD", ins.RegDest, loc)
+			if w.gosubarch == "avx2" {
+				w.opcode("VMOVDQU", ins.RegDest, loc)
+			} else {
+				w.opcode("MOVUPD", ins.RegDest, loc)
+			}
 		case OP:
 			v := ins.Var
 			w.comment("%s = %s", v.Name, v.Expr())
@@ -176,11 +185,16 @@ func (w codeWriter) emitInstr(ins Instr) {
 			if !ok {
 				panic("unsupported operation")
 			}
-			if ins.RegDest == ins.RegLeft {
-				w.opcode(opcode, ins.RegRight, ins.RegLeft)
+			if w.gosubarch == "avx2" {
+				// use ternary form
+				w.opcode(opcode, ins.RegRight, ins.RegLeft, ins.RegDest)
 			} else {
-				w.opcode("MOVAPS", ins.RegLeft, ins.RegDest)
-				w.opcode(opcode, ins.RegRight, ins.RegDest)
+				if ins.RegDest == ins.RegLeft {
+					w.opcode(opcode, ins.RegRight, ins.RegLeft)
+				} else {
+					w.opcode("MOVAPS", ins.RegLeft, ins.RegDest)
+					w.opcode(opcode, ins.RegRight, ins.RegDest)
+				}
 			}
 		}
 	case "arm":
