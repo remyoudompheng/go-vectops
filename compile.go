@@ -18,9 +18,13 @@ type Var struct {
 	AddrReg  string
 	Type     string
 	ReadOnly bool
-	Op       token.Token
+	Op       Op
 	Left     *Var
 	Right    *Var
+}
+
+func (v *Var) Expr() string {
+	return v.Left.Name + " " + opstring[v.Op] + " " + v.Right.Name
 }
 
 type Instr struct {
@@ -29,7 +33,7 @@ type Instr struct {
 	// For LOAD, STORE
 	Var *Var
 	// For OP
-	Op       token.Token
+	Op       Op
 	RegLeft  string
 	RegRight string
 }
@@ -139,7 +143,7 @@ func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) 
 		case *ast.ParenExpr:
 			return pass2(node.X)
 		case *ast.BinaryExpr:
-			op := node.Op
+			op := TokenOp(node.Op)
 			left, err := pass2(node.X)
 			if err != nil {
 				return nil, err
@@ -219,4 +223,37 @@ func (c *Compiler) Emit(root *Var) []Instr {
 	instrs = append(instrs,
 		Instr{Kind: STORE, Var: root, RegDest: root.Location})
 	return instrs
+}
+
+func TokenOp(tok token.Token) Op {
+	switch tok {
+	case token.ADD:
+		return ADD
+	case token.SUB:
+		return SUB
+	case token.MUL:
+		return MUL
+	case token.QUO:
+		return DIV
+	case token.AND:
+		return AND
+	case token.OR:
+		return OR
+	case token.XOR:
+		return XOR
+	case token.SHL:
+		return SHL
+	case token.SHR:
+		return SHR
+	default:
+		panic("unsupported operator " + tok.String())
+	}
+}
+
+func IsCommutative(op Op) bool {
+	switch op {
+	case ADD, AND, OR, XOR, MUL:
+		return true
+	}
+	return false
 }

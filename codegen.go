@@ -171,7 +171,7 @@ func (w codeWriter) emitInstr(ins Instr) {
 			w.opcode("MOVUPD", ins.RegDest, loc)
 		case OP:
 			v := ins.Var
-			w.comment("%s = %s %s %s", v.Name, v.Left.Name, v.Op, v.Right.Name)
+			w.comment("%s = %s", v.Name, v.Expr())
 			opcode, ok := w.arch.Opcode(ins.Op, v.Type)
 			if !ok {
 				panic("unsupported operation")
@@ -214,7 +214,7 @@ func (w codeWriter) emitInstr(ins Instr) {
 			}
 		case OP:
 			v := ins.Var
-			w.comment("%s = %s %s %s", v.Name, v.Left.Name, v.Op, v.Right.Name)
+			w.comment("%s = %s", v.Name, v.Expr())
 			opcode, ok := w.arch.Opcode(ins.Op, v.Type)
 			if !ok {
 				panic("unsupported operation")

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go/token"
 )
 
 type GoType uint
@@ -25,6 +24,32 @@ var types = map[string]GoType{
 	"byte":    tU8,
 }
 
+type Op int
+
+const (
+	ADD = iota
+	SUB
+	MUL
+	DIV
+	AND
+	XOR
+	OR
+	SHL
+	SHR
+)
+
+var opstring = [...]string{
+	ADD: "+",
+	SUB: "-",
+	MUL: "*",
+	DIV: "/",
+	AND: "&",
+	OR:  "|",
+	XOR: "^",
+	SHL: "<<",
+	SHR: ">>",
+}
+
 type Arch struct {
 	PtrSize     int
 	UintType    GoType // the type of unsized uint
@@ -36,7 +61,7 @@ type Arch struct {
 	Types       map[GoType]Type
 }
 
-func (a *Arch) Opcode(op token.Token, typename string) (opcode string, ok bool) {
+func (a *Arch) Opcode(op Op, typename string) (opcode string, ok bool) {
 	typ := types[typename]
 	if typename == "uint" {
 		typ = a.UintType
@@ -46,14 +71,6 @@ func (a *Arch) Opcode(op token.Token, typename string) (opcode string, ok bool) 
 		return op, ok
 	}
 	return "", false
-}
-
-func IsCommutative(op token.Token) bool {
-	switch op {
-	case token.ADD, token.AND, token.OR, token.XOR, token.MUL:
-		return true
-	}
-	return false
 }
 
 func (a *Arch) LogWidth(typename string) int {
@@ -75,7 +92,7 @@ func (a *Arch) Width(typename string) int {
 type Type struct {
 	Size    int
 	LogSize int // Size = 1 << LogSize
-	Ops     map[token.Token]string
+	Ops     map[Op]string
 }
 
 func FindArch(goarch, goarm string) Arch {
@@ -107,72 +124,72 @@ var amd64 = Arch{
 		tU8: Type{
 			Size:    1,
 			LogSize: 0,
-			Ops: map[token.Token]string{
-				token.ADD: "PADDB",
-				token.SUB: "PSUBB",
-				token.AND: "PAND",
-				token.OR:  "POR",
-				token.XOR: "PXOR",
+			Ops: map[Op]string{
+				ADD: "PADDB",
+				SUB: "PSUBB",
+				AND: "PAND",
+				OR:  "POR",
+				XOR: "PXOR",
 			},
 		},
 		tU16: Type{
 			Size:    2,
 			LogSize: 1,
-			Ops: map[token.Token]string{
-				token.ADD: "PADDW",
-				token.MUL: "PMULLW",
-				token.SUB: "PSUBW",
-				token.AND: "PAND",
-				token.OR:  "POR",
-				token.XOR: "PXOR",
-				token.SHL: "PSLLW",
-				token.SHR: "PSRLW",
+			Ops: map[Op]string{
+				ADD: "PADDW",
+				MUL: "PMULLW",
+				SUB: "PSUBW",
+				AND: "PAND",
+				OR:  "POR",
+				XOR: "PXOR",
+				SHL: "PSLLW",
+				SHR: "PSRLW",
 			},
 		},
 		tU32: Type{
 			Size:    4,
 			LogSize: 2,
-			Ops: map[token.Token]string{
-				token.ADD: "PADDL",
-				token.SUB: "PSUBL",
-				token.AND: "PAND",
-				token.OR:  "POR",
-				token.XOR: "PXOR",
-				token.SHL: "PSLLL",
-				token.SHR: "PSRLL",
+			Ops: map[Op]string{
+				ADD: "PADDL",
+				SUB: "PSUBL",
+				AND: "PAND",
+				OR:  "POR",
+				XOR: "PXOR",
+				SHL: "PSLLL",
+				SHR: "PSRLL",
 			},
 		},
 		tU64: Type{
 			Size:    8,
 			LogSize: 3,
-			Ops: map[token.Token]string{
-				token.ADD: "PADDQ",
-				token.SUB: "PSUBQ",
-				token.AND: "PAND",
-				token.OR:  "POR",
-				token.XOR: "PXOR",
-				token.SHL: "PSLLQ",
-				token.SHR: "PSRLQ",
+			Ops: map[Op]string{
+				ADD: "PADDQ",
+				SUB: "PSUBQ",
+				AND: "PAND",
+				OR:  "POR",
+				XOR: "PXOR",
+				SHL: "PSLLQ",
+				SHR: "PSRLQ",
 			},
 		},
 		tF32: Type{
 			Size:    4,
 			LogSize: 2,
-			Ops: map[token.Token]string{
-				token.ADD: "ADDPS",
-				token.MUL: "MULPS",
-				token.SUB: "SUBPS",
-				token.QUO: "DIVPS",
+			Ops: map[Op]string{
+				ADD: "ADDPS",
+				MUL: "MULPS",
+				SUB: "SUBPS",
+				DIV: "DIVPS",
 			},
 		},
 		tF64: Type{
 			Size:    8,
 			LogSize: 3,
-			Ops: map[token.Token]string{
-				token.ADD: "ADDPD",
-				token.MUL: "MULPD",
-				token.SUB: "SUBPD",
-				token.QUO: "DIVPD",
+			Ops: map[Op]string{
+				ADD: "ADDPD",
+				MUL: "MULPD",
+				SUB: "SUBPD",
+				DIV: "DIVPD",
 			},
 		},
 	},
@@ -199,46 +216,46 @@ var neonTypes = map[GoType]Type{
 	tU8: Type{
 		Size:    1,
 		LogSize: 0,
-		Ops: map[token.Token]string{
-			token.ADD: "VADD.I8",
-			token.SUB: "VSUB.I8",
-			token.MUL: "VMUL.I8",
-			token.AND: "VAND",
-			token.OR:  "VORR",
-			token.XOR: "VEOR",
+		Ops: map[Op]string{
+			ADD: "VADD.I8",
+			SUB: "VSUB.I8",
+			MUL: "VMUL.I8",
+			AND: "VAND",
+			OR:  "VORR",
+			XOR: "VEOR",
 		},
 	},
 	tU16: Type{
 		Size:    2,
 		LogSize: 1,
-		Ops: map[token.Token]string{
-			token.ADD: "VADD.I16",
-			token.SUB: "VSUB.I16",
-			token.MUL: "VMUL.I16",
-			token.AND: "VAND",
-			token.OR:  "VORR",
-			token.XOR: "VEOR",
+		Ops: map[Op]string{
+			ADD: "VADD.I16",
+			SUB: "VSUB.I16",
+			MUL: "VMUL.I16",
+			AND: "VAND",
+			OR:  "VORR",
+			XOR: "VEOR",
 		},
 	},
 	tU32: Type{
 		Size:    4,
 		LogSize: 2,
-		Ops: map[token.Token]string{
-			token.ADD: "VADD.I32",
-			token.SUB: "VSUB.I32",
-			token.MUL: "VMUL.I32",
-			token.AND: "VAND",
-			token.OR:  "VORR",
-			token.XOR: "VEOR",
+		Ops: map[Op]string{
+			ADD: "VADD.I32",
+			SUB: "VSUB.I32",
+			MUL: "VMUL.I32",
+			AND: "VAND",
+			OR:  "VORR",
+			XOR: "VEOR",
 		},
 	},
 	tF32: Type{
 		Size:    4,
 		LogSize: 2,
-		Ops: map[token.Token]string{
-			token.ADD: "VADD.F32",
-			token.MUL: "VMUL.F32",
-			token.SUB: "VSUB.F32",
+		Ops: map[Op]string{
+			ADD: "VADD.F32",
+			MUL: "VMUL.F32",
+			SUB: "VSUB.F32",
 		},
 	},
 }
