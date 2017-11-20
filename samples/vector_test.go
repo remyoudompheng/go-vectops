@@ -52,7 +52,7 @@ func TestFormula(t *testing.T) {
 	SomeFormula(out[:], a[:], b[:], c[:])
 	for i, xout := range out {
 		x, y, z := a[i], b[i], c[i]
-		expect := (x*y + y*z + z*x) / (x*x + y*y + z*z)
+		expect := (x*y + y*z + z*x) - x*y*z
 		if xout != expect {
 			t.Errorf("c[%d] = %-1g, expected %-1g", i, xout, expect)
 		}
@@ -127,22 +127,22 @@ func BenchmarkDiffNoSIMD(b *testing.B) {
 	b.SetBytes(length)
 }
 
-func BenchmarkDetF64(bench *testing.B) {
-	var det, a, b, c, d [4096]float64
+func BenchmarkDetF32(bench *testing.B) {
+	var det, a, b, c, d [4096]float32
 	for i := 0; i < bench.N; i++ {
-		DetF64(det[:], a[:], b[:], c[:], d[:])
+		DetF32(det[:], a[:], b[:], c[:], d[:])
 	}
-	bench.SetBytes(int64(len(det)) * 8)
+	bench.SetBytes(int64(len(det)) * 4)
 }
 
-func BenchmarkDetF64NoSIMD(bench *testing.B) {
-	var det, a, b, c, d [4096]float64
+func BenchmarkDetF32NoSIMD(bench *testing.B) {
+	var det, a, b, c, d [4096]float32
 	for i := 0; i < bench.N; i++ {
 		for n := range det {
 			det[n] = a[n]*d[n] - b[n]*c[n]
 		}
 	}
-	bench.SetBytes(int64(len(det)) * 8)
+	bench.SetBytes(int64(len(det)) * 4)
 }
 
 func BenchmarkNormF32(b *testing.B) {

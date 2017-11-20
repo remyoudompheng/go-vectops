@@ -28,7 +28,7 @@ func DiffInt(a []uint) []uint {
 	return result
 }
 
-func DetF64(det, a, b, c, d []float64)
+func DetF32(det, a, b, c, d []float32)
 
 //line vector.vgo:39
 

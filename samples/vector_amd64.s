@@ -19,7 +19,7 @@ NormFloat32s__panic:
 
 NormFloat32s__ok:
 	SUBQ	$4, DX
-	XORQ	CX, CX
+	MOVQ	$0, CX
 
 NormFloat32s__loop:
 	CMPQ	CX, DX
@@ -46,7 +46,7 @@ NormFloat32s__process:
 	ADDQ	$4, CX
 
 	// if i >= length { break }
-	CMPQ	CX, out+16(FP)
+	CMPQ	CX, out+8(FP)
 	JGE	NormFloat32s__return
 	JMP	NormFloat32s__loop
 
@@ -74,7 +74,7 @@ AddUints__panic:
 
 AddUints__ok:
 	SUBQ	$2, DX
-	XORQ	CX, CX
+	MOVQ	$0, CX
 
 AddUints__loop:
 	CMPQ	CX, DX
@@ -93,7 +93,7 @@ AddUints__process:
 	ADDQ	$2, CX
 
 	// if i >= length { break }
-	CMPQ	CX, out+16(FP)
+	CMPQ	CX, out+8(FP)
 	JGE	AddUints__return
 	JMP	AddUints__loop
 
@@ -124,7 +124,7 @@ SomeFormula__panic:
 
 SomeFormula__ok:
 	SUBQ	$4, DX
-	XORQ	CX, CX
+	MOVQ	$0, CX
 
 SomeFormula__loop:
 	CMPQ	CX, DX
@@ -156,31 +156,20 @@ SomeFormula__process:
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
 	ADDPS	X6, X4
 
-	// __auto_tmp_005 = x * x
+	// __auto_tmp_005 = x * y
 	MOVAPS	X0, X7
-	MULPS	X0, X7
+	MULPS	X1, X7
 
-	// __auto_tmp_006 = y * y
-	MOVAPS	X1, X8
-	MULPS	X1, X8
+	// __auto_tmp_006 = __auto_tmp_005 * z
+	MULPS	X2, X7
 
-	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
-	ADDPS	X8, X7
-
-	// __auto_tmp_008 = z * z
-	MOVAPS	X2, X9
-	MULPS	X2, X9
-
-	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
-	ADDPS	X9, X7
-
-	// out = __auto_tmp_004 / __auto_tmp_009
-	DIVPS	X7, X4
+	// out = __auto_tmp_004 - __auto_tmp_006
+	SUBPS	X7, X4
 	MOVUPD	X4, (BX)(CX*4)
 	ADDQ	$4, CX
 
 	// if i >= length { break }
-	CMPQ	CX, out+16(FP)
+	CMPQ	CX, out+8(FP)
 	JGE	SomeFormula__return
 	JMP	SomeFormula__loop
 
@@ -208,7 +197,7 @@ subByte__panic:
 
 subByte__ok:
 	SUBQ	$16, DX
-	XORQ	CX, CX
+	MOVQ	$0, CX
 
 subByte__loop:
 	CMPQ	CX, DX
@@ -227,7 +216,7 @@ subByte__process:
 	ADDQ	$16, CX
 
 	// if i >= length { break }
-	CMPQ	CX, out+16(FP)
+	CMPQ	CX, out+8(FP)
 	JGE	subByte__return
 	JMP	subByte__loop
 
@@ -255,7 +244,7 @@ subuint__panic:
 
 subuint__ok:
 	SUBQ	$2, DX
-	XORQ	CX, CX
+	MOVQ	$0, CX
 
 subuint__loop:
 	CMPQ	CX, DX
@@ -274,15 +263,15 @@ subuint__process:
 	ADDQ	$2, CX
 
 	// if i >= length { break }
-	CMPQ	CX, out+16(FP)
+	CMPQ	CX, out+8(FP)
 	JGE	subuint__return
 	JMP	subuint__loop
 
 subuint__return:
 	RET
 
-// func DetF64(det, a, b, c, d []float64)
-TEXT ·DetF64(SB), 7, $0
+// func DetF32(det, a, b, c, d []float32)
+TEXT ·DetF32(SB), 7, $0
 
 	// Load pointers.
 	MOVQ	det+0(FP), BX
@@ -294,51 +283,51 @@ TEXT ·DetF64(SB), 7, $0
 	// Check lengths.
 	MOVQ	det+8(FP), DX
 	CMPQ	DX, a+32(FP)
-	JNE	DetF64__panic
+	JNE	DetF32__panic
 	CMPQ	DX, b+56(FP)
-	JNE	DetF64__panic
+	JNE	DetF32__panic
 	CMPQ	DX, c+80(FP)
-	JNE	DetF64__panic
+	JNE	DetF32__panic
 	CMPQ	DX, d+104(FP)
-	JNE	DetF64__panic
-	JMP	DetF64__ok
+	JNE	DetF32__panic
+	JMP	DetF32__ok
 
-DetF64__panic:
+DetF32__panic:
 	CALL	runtime·panicindex(SB)
 
-DetF64__ok:
-	SUBQ	$2, DX
-	XORQ	CX, CX
+DetF32__ok:
+	SUBQ	$4, DX
+	MOVQ	$0, CX
 
-DetF64__loop:
+DetF32__loop:
 	CMPQ	CX, DX
 
-	// if i > length-2 { i = length-2 }
-	JLE	DetF64__process
+	// if i > length-4 { i = length-4 }
+	JLE	DetF32__process
 	MOVQ	DX, CX
 
-DetF64__process:
-	MOVUPS	(SI)(CX*8), X0
-	MOVUPS	(R9)(CX*8), X1
+DetF32__process:
+	MOVUPS	(SI)(CX*4), X0
+	MOVUPS	(R9)(CX*4), X1
 
 	// __auto_tmp_000 = a * d
-	MULPD	X1, X0
-	MOVUPS	(DI)(CX*8), X2
-	MOVUPS	(R8)(CX*8), X4
+	MULPS	X1, X0
+	MOVUPS	(DI)(CX*4), X2
+	MOVUPS	(R8)(CX*4), X4
 
 	// __auto_tmp_001 = b * c
-	MULPD	X4, X2
+	MULPS	X4, X2
 
 	// det = __auto_tmp_000 - __auto_tmp_001
-	SUBPD	X2, X0
-	MOVUPD	X0, (BX)(CX*8)
-	ADDQ	$2, CX
+	SUBPS	X2, X0
+	MOVUPD	X0, (BX)(CX*4)
+	ADDQ	$4, CX
 
 	// if i >= length { break }
-	CMPQ	CX, det+16(FP)
-	JGE	DetF64__return
-	JMP	DetF64__loop
+	CMPQ	CX, det+8(FP)
+	JGE	DetF32__return
+	JMP	DetF32__loop
 
-DetF64__return:
+DetF32__return:
 	RET
 

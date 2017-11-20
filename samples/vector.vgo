@@ -9,7 +9,7 @@ func AddUints(out, in1, in2 []uint) {
 }
 
 func SomeFormula(out, x, y, z []float32) {
-	out = (x*y + y*z + z*x) / (x*x + y*y + z*z)
+	out = (x*y + y*z + z*x) -x*y*z
 }
 
 func subByte(out, a, b []byte) {
@@ -32,7 +32,7 @@ func DiffInt(a []uint) []uint {
 	return result
 }
 
-func DetF64(det, a, b, c, d []float64) {
+func DetF32(det, a, b, c, d []float32) {
 	det = a*d - b*c
 }
 
