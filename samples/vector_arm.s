@@ -35,17 +35,17 @@ NormFloat32s__process:
 	WORD	$0xec900b04	// VLDMIA (R0), Q0
 
 	// __auto_tmp_000 = x * x
-	WORD	$0xf3004d50	// VMUL.F32 Q0, Q0, Q2
+	WORD	$0xf3000d50	// VMUL.F32 Q0, Q0, Q0
 	ADD	R11<<2, R3, R0
 	WORD	$0xec902b04	// VLDMIA (R0), Q1
 
 	// __auto_tmp_001 = y * y
-	WORD	$0xf3026d52	// VMUL.F32 Q1, Q1, Q3
+	WORD	$0xf3022d52	// VMUL.F32 Q1, Q1, Q1
 
 	// out = __auto_tmp_000 + __auto_tmp_001
-	WORD	$0xf2044d46	// VADD.F32 Q2, Q3, Q2
+	WORD	$0xf2022d40	// VADD.F32 Q1, Q0, Q1
 	ADD	R11<<2, R1, R0
-	WORD	$0xec804b04	// VSTMIA (R0), Q2
+	WORD	$0xec802b04	// VSTMIA (R0), Q1
 	ADD	$4, R11
 
 	// if i >= length { break }
@@ -96,9 +96,9 @@ AddUints__process:
 	WORD	$0xec902b04	// VLDMIA (R0), Q1
 
 	// out = in1 + in2
-	WORD	$0xf2200842	// VADD.I32 Q0, Q1, Q0
+	WORD	$0xf2222840	// VADD.I32 Q1, Q0, Q1
 	ADD	R11<<2, R1, R0
-	WORD	$0xec800b04	// VSTMIA (R0), Q0
+	WORD	$0xec802b04	// VSTMIA (R0), Q1
 	ADD	$4, R11
 
 	// if i >= length { break }
@@ -151,43 +151,43 @@ SomeFormula__process:
 	WORD	$0xec900b04	// VLDMIA (R0), Q0
 
 	// __auto_tmp_000 = x * x
-	WORD	$0xf3006d50	// VMUL.F32 Q0, Q0, Q3
+	WORD	$0xf3002d50	// VMUL.F32 Q0, Q0, Q1
 	ADD	R11<<2, R3, R0
-	WORD	$0xec902b04	// VLDMIA (R0), Q1
-
-	// __auto_tmp_001 = y * y
-	WORD	$0xf3028d52	// VMUL.F32 Q1, Q1, Q4
-
-	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
-	WORD	$0xf2066d48	// VADD.F32 Q3, Q4, Q3
-	ADD	R11<<2, R4, R0
 	WORD	$0xec904b04	// VLDMIA (R0), Q2
 
+	// __auto_tmp_001 = y * y
+	WORD	$0xf3046d54	// VMUL.F32 Q2, Q2, Q3
+
+	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
+	WORD	$0xf2066d42	// VADD.F32 Q3, Q1, Q3
+	ADD	R11<<2, R4, R0
+	WORD	$0xec902b04	// VLDMIA (R0), Q1
+
 	// __auto_tmp_003 = z * z
-	WORD	$0xf304ad54	// VMUL.F32 Q2, Q2, Q5
+	WORD	$0xf3028d52	// VMUL.F32 Q1, Q1, Q4
 
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
-	WORD	$0xf2066d4a	// VADD.F32 Q3, Q5, Q3
+	WORD	$0xf2088d46	// VADD.F32 Q4, Q3, Q4
 
 	// __auto_tmp_005 = x * y
-	WORD	$0xf300cd52	// VMUL.F32 Q0, Q1, Q6
+	WORD	$0xf3006d54	// VMUL.F32 Q0, Q2, Q3
 
 	// __auto_tmp_006 = y * z
-	WORD	$0xf302ed54	// VMUL.F32 Q1, Q2, Q7
+	WORD	$0xf3044d52	// VMUL.F32 Q2, Q1, Q2
 
 	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
-	WORD	$0xf20ccd4e	// VADD.F32 Q6, Q7, Q6
+	WORD	$0xf2044d46	// VADD.F32 Q2, Q3, Q2
 
-	// Manually added: __auto_tmp_006' = x * z
-	WORD	$0xf300ed54	// VMUL.F32 Q0, Q2, Q7
+	// __auto_tmp_008 = z * x
+	WORD	$0xf3000d52	// VMUL.F32 Q0, Q1, Q0
 
-	// Manually added: __auto_tmp_008 = __auto_tmp_007 + __auto_tmp_006'
-	WORD	$0xf20ccd4e	// VADD.F32 Q6, Q7, Q6
+	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
+	WORD	$0xf2000d44	// VADD.F32 Q0, Q2, Q0
 
-	// out = __auto_tmp_004 - __auto_tmp_008
-	WORD	$0xf2266d4c	// VSUB.F32 Q3, Q6, Q3
+	// out = __auto_tmp_004 - __auto_tmp_009
+	WORD	$0xf2282d40	// VSUB.F32 Q4, Q0, Q1
 	ADD	R11<<2, R1, R0
-	WORD	$0xec806b04	// VSTMIA (R0), Q3
+	WORD	$0xec802b04	// VSTMIA (R0), Q1
 	ADD	$4, R11
 
 	// if i >= length { break }
@@ -352,17 +352,17 @@ DetF32__process:
 	WORD	$0xec902b04	// VLDMIA (R0), Q1
 
 	// __auto_tmp_000 = a * d
-	WORD	$0xf3000d52	// VMUL.F32 Q0, Q1, Q0
+	WORD	$0xf3022d50	// VMUL.F32 Q1, Q0, Q1
 	ADD	R11<<2, R3, R0
-	WORD	$0xec904b04	// VLDMIA (R0), Q2
+	WORD	$0xec900b04	// VLDMIA (R0), Q0
 	ADD	R11<<2, R4, R0
-	WORD	$0xec906b04	// VLDMIA (R0), Q3
+	WORD	$0xec904b04	// VLDMIA (R0), Q2
 
 	// __auto_tmp_001 = b * c
-	WORD	$0xf3044d56	// VMUL.F32 Q2, Q3, Q2
+	WORD	$0xf3044d50	// VMUL.F32 Q2, Q0, Q2
 
 	// det = __auto_tmp_000 - __auto_tmp_001
-	WORD	$0xf2200d44	// VSUB.F32 Q0, Q2, Q0
+	WORD	$0xf2220d44	// VSUB.F32 Q1, Q2, Q0
 	ADD	R11<<2, R1, R0
 	WORD	$0xec800b04	// VSTMIA (R0), Q0
 	ADD	$4, R11

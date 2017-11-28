@@ -34,17 +34,15 @@ NormFloat32s__process:
 	MOVUPS	(SI)(CX*4), X0
 
 	// __auto_tmp_000 = x * x
-	MOVAPS	X0, X2
-	MULPS	X0, X2
+	MULPS	X0, X0
 	MOVUPS	(DI)(CX*4), X1
 
 	// __auto_tmp_001 = y * y
-	MOVAPS	X1, X4
-	MULPS	X1, X4
+	MULPS	X1, X1
 
 	// out = __auto_tmp_000 + __auto_tmp_001
-	ADDPS	X4, X2
-	MOVUPD	X2, (BX)(CX*4)
+	ADDPS	X0, X1
+	MOVUPD	X1, (BX)(CX*4)
 	ADDQ	$4, CX
 
 	// if i >= length { break }
@@ -90,8 +88,8 @@ AddUints__process:
 	MOVUPS	(DI)(CX*8), X1
 
 	// out = in1 + in2
-	PADDQ	X1, X0
-	MOVUPD	X0, (BX)(CX*8)
+	PADDQ	X0, X1
+	MOVUPD	X1, (BX)(CX*8)
 	ADDQ	$2, CX
 
 	// if i >= length { break }
@@ -139,46 +137,45 @@ SomeFormula__process:
 	MOVUPS	(SI)(CX*4), X0
 
 	// __auto_tmp_000 = x * x
-	MOVAPS	X0, X4
-	MULPS	X0, X4
-	MOVUPS	(DI)(CX*4), X1
+	MOVAPS	X0, X1
+	MULPS	X0, X1
+	MOVUPS	(DI)(CX*4), X2
 
 	// __auto_tmp_001 = y * y
+	MOVAPS	X2, X4
+	MULPS	X2, X4
+
+	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
+	ADDPS	X1, X4
+	MOVUPS	(R8)(CX*4), X1
+
+	// __auto_tmp_003 = z * z
 	MOVAPS	X1, X5
 	MULPS	X1, X5
 
-	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
-	ADDPS	X5, X4
-	MOVUPS	(R8)(CX*4), X2
-
-	// __auto_tmp_003 = z * z
-	MOVAPS	X2, X6
-	MULPS	X2, X6
-
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
-	ADDPS	X6, X4
+	ADDPS	X4, X5
 
 	// __auto_tmp_005 = x * y
-	MOVAPS	X0, X7
-	MULPS	X1, X7
+	MOVAPS	X0, X4
+	MULPS	X2, X4
 
 	// __auto_tmp_006 = y * z
-	MOVAPS	X1, X8
-	MULPS	X2, X8
+	MULPS	X1, X2
 
 	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
-	ADDPS	X8, X7
+	ADDPS	X4, X2
 
 	// __auto_tmp_008 = z * x
-	MOVAPS	X2, X9
-	MULPS	X0, X9
+	MULPS	X1, X0
 
 	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
-	ADDPS	X9, X7
+	ADDPS	X2, X0
 
 	// out = __auto_tmp_004 - __auto_tmp_009
-	SUBPS	X7, X4
-	MOVUPD	X4, (BX)(CX*4)
+	MOVAPS	X5, X1
+	SUBPS	X0, X1
+	MOVUPD	X1, (BX)(CX*4)
 	ADDQ	$4, CX
 
 	// if i >= length { break }
@@ -324,14 +321,15 @@ DetF32__process:
 	MOVUPS	(R9)(CX*4), X1
 
 	// __auto_tmp_000 = a * d
-	MULPS	X1, X0
-	MOVUPS	(DI)(CX*4), X2
-	MOVUPS	(R8)(CX*4), X4
+	MULPS	X0, X1
+	MOVUPS	(DI)(CX*4), X0
+	MOVUPS	(R8)(CX*4), X2
 
 	// __auto_tmp_001 = b * c
-	MULPS	X4, X2
+	MULPS	X0, X2
 
 	// det = __auto_tmp_000 - __auto_tmp_001
+	MOVAPS	X1, X0
 	SUBPS	X2, X0
 	MOVUPD	X0, (BX)(CX*4)
 	ADDQ	$4, CX

@@ -86,73 +86,35 @@ func Compile(f *Function, w codeWriter) ([]Instr, error) {
 	root = &outvar
 	c.Vars[outvar.Name] = root
 	instrs := c.Emit(root)
+	c.AllocRegs(instrs)
 	return instrs, nil
 }
 
-func (c *Compiler) getFreeReg(regs map[string]bool) string {
-	for _, reg := range c.VectorRegs {
-		if !regs[reg] {
-			regs[reg] = true
-			// fmt.Printf("using register %s\n", reg)
-			return reg
-		}
-	}
-	panic("out of registers")
-}
-
-// buildTree allocates registers and prepares the graph of operations.
-// Register allocation is greedy.
+// buildTree transforms the original expression in a SSA-like
+// set of variables.
 func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) {
-	var pass1 func(ast.Expr) error
-	var pass2 func(ast.Expr) (*Var, error)
-	// Pass 1 allocates registers for input array elements.
-	pass1 = func(e ast.Expr) error {
-		switch node := e.(type) {
-		case *ast.Ident:
-			if v, ok := c.Vars[node.Name]; !ok {
-				return fmt.Errorf("undefined variable %s", node.Name)
-			} else {
-				if v.Location != "" {
-					// already chosen a register: it's shared, mark it read only
-					v.ReadOnly = true
-				} else {
-					v.Location = c.getFreeReg(regs)
-				}
-				return nil
-			}
-		case *ast.ParenExpr:
-			return pass1(node.X)
-		case *ast.BinaryExpr:
-			if err := pass1(node.X); err != nil {
-				return err
-			}
-			if err := pass1(node.Y); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	// Pass 2 build temporary variables for intermediate nodes.
+	var do func(ast.Expr) (*Var, error)
+	// build temporary variables for intermediate nodes.
 	nTemps := 0
-	pass2 = func(e ast.Expr) (*Var, error) {
+	do = func(e ast.Expr) (*Var, error) {
 		switch node := e.(type) {
 		case *ast.Ident:
-			return c.Vars[node.Name], nil
+			if v, ok := c.Vars[node.Name]; ok {
+				return v, nil
+			} else {
+				return nil, fmt.Errorf("undefined variable %s", node.Name)
+			}
 		case *ast.ParenExpr:
-			return pass2(node.X)
+			return do(node.X)
 		case *ast.BinaryExpr:
 			op := TokenOp(node.Op)
-			left, err := pass2(node.X)
+			left, err := do(node.X)
 			if err != nil {
 				return nil, err
 			}
-			right, err := pass2(node.Y)
+			right, err := do(node.Y)
 			if err != nil {
 				return nil, err
-			}
-			// create a temporary.
-			if left.ReadOnly && !right.ReadOnly && IsCommutative(op) {
-				left, right = right, left
 			}
 			tmp := &Var{
 				Name:     fmt.Sprintf("__auto_tmp_%03d", nTemps),
@@ -162,23 +124,13 @@ func (c *Compiler) buildTree(expr ast.Expr, regs map[string]bool) (*Var, error) 
 				Left:     left,
 				Right:    right,
 			}
-			if left.ReadOnly {
-				// must allocate a register
-				tmp.Location = c.getFreeReg(regs)
-			}
 			c.Vars[tmp.Name] = tmp
 			nTemps++
 			return tmp, nil
 		}
 		return nil, fmt.Errorf("cannot handle %s", FormatNode(expr))
 	}
-
-	// run passes
-	err := pass1(expr)
-	if err != nil {
-		return nil, err
-	}
-	return pass2(expr)
+	return do(expr)
 }
 
 func (c *Compiler) Emit(root *Var) []Instr {
@@ -220,6 +172,72 @@ func (c *Compiler) Emit(root *Var) []Instr {
 	instrs = append(instrs,
 		Instr{Kind: STORE, Var: root})
 	return instrs
+}
+
+func (c *Compiler) AllocRegs(prog []Instr) {
+	lastRef := make(map[*Var]int)
+	// lastRef[v] == idx if prog[idx] is the last reference to v
+	for idx, ins := range prog {
+		if ins.Var != nil {
+			lastRef[ins.Var] = idx
+		}
+		if ins.Left != nil {
+			lastRef[ins.Left] = idx
+		}
+		if ins.Right != nil {
+			lastRef[ins.Right] = idx
+		}
+	}
+
+	regs := make(map[string]bool)
+	getReg := func() string {
+		for _, reg := range c.VectorRegs {
+			if !regs[reg] {
+				regs[reg] = true
+				return reg
+			}
+		}
+		panic("out of registers")
+	}
+
+	for idx, ins := range prog {
+		switch ins.Kind {
+		case LOAD:
+			if ins.Var.Location == "" {
+				ins.Var.Location = getReg()
+			} else {
+				panic("cannot LOAD " + ins.Var.Name + " twice")
+			}
+		case STORE:
+			if ins.Var.Location == "" {
+				panic("STORE before assignment of " + ins.Var.Name)
+			}
+		case OP:
+			if ins.Left.Location == "" {
+				panic("use before assignment of " + ins.Left.Name)
+			}
+			if ins.Right.Location == "" {
+				panic("use before assignment of " + ins.Right.Name)
+			}
+			if ins.Var.Location != "" {
+				panic("assigned " + ins.Var.Name + " twice")
+			}
+			// It's forbidden to reuse Right for the result
+			// of the instruction (on amd64, we will do
+			// MOV Left, Var; OP Right, Var)
+			if IsCommutative(ins.Op) && lastRef[ins.Right] == idx {
+				ins.Left, ins.Right = ins.Right, ins.Left
+				prog[idx] = ins
+			}
+			if lastRef[ins.Left] == idx {
+				regs[ins.Left.Location] = false // free register
+			}
+			ins.Var.Location = getReg()
+			if lastRef[ins.Right] == idx && ins.Right.Location != ins.Var.Location {
+				regs[ins.Right.Location] = false // free register
+			}
+		}
+	}
 }
 
 func TokenOp(tok token.Token) Op {

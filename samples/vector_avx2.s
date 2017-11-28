@@ -34,15 +34,15 @@ NormFloat32s__process:
 	VMOVDQU	(SI)(CX*4), Y0
 
 	// __auto_tmp_000 = x * x
-	VMULPS	Y0, Y0, Y2
+	VMULPS	Y0, Y0, Y0
 	VMOVDQU	(DI)(CX*4), Y1
 
 	// __auto_tmp_001 = y * y
-	VMULPS	Y1, Y1, Y4
+	VMULPS	Y1, Y1, Y1
 
 	// out = __auto_tmp_000 + __auto_tmp_001
-	VADDPS	Y4, Y2, Y2
-	VMOVDQU	Y2, (BX)(CX*4)
+	VADDPS	Y0, Y1, Y1
+	VMOVDQU	Y1, (BX)(CX*4)
 	ADDQ	$8, CX
 
 	// if i >= length { break }
@@ -88,8 +88,8 @@ AddUints__process:
 	VMOVDQU	(DI)(CX*8), Y1
 
 	// out = in1 + in2
-	VPADDQ	Y1, Y0, Y0
-	VMOVDQU	Y0, (BX)(CX*8)
+	VPADDQ	Y0, Y1, Y1
+	VMOVDQU	Y1, (BX)(CX*8)
 	ADDQ	$4, CX
 
 	// if i >= length { break }
@@ -137,40 +137,40 @@ SomeFormula__process:
 	VMOVDQU	(SI)(CX*4), Y0
 
 	// __auto_tmp_000 = x * x
-	VMULPS	Y0, Y0, Y4
-	VMOVDQU	(DI)(CX*4), Y1
+	VMULPS	Y0, Y0, Y1
+	VMOVDQU	(DI)(CX*4), Y2
 
 	// __auto_tmp_001 = y * y
-	VMULPS	Y1, Y1, Y5
+	VMULPS	Y2, Y2, Y4
 
 	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
-	VADDPS	Y5, Y4, Y4
-	VMOVDQU	(R8)(CX*4), Y2
+	VADDPS	Y1, Y4, Y4
+	VMOVDQU	(R8)(CX*4), Y1
 
 	// __auto_tmp_003 = z * z
-	VMULPS	Y2, Y2, Y6
+	VMULPS	Y1, Y1, Y5
 
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
-	VADDPS	Y6, Y4, Y4
+	VADDPS	Y4, Y5, Y5
 
 	// __auto_tmp_005 = x * y
-	VMULPS	Y1, Y0, Y7
+	VMULPS	Y2, Y0, Y4
 
 	// __auto_tmp_006 = y * z
-	VMULPS	Y2, Y1, Y8
+	VMULPS	Y1, Y2, Y2
 
 	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
-	VADDPS	Y8, Y7, Y7
+	VADDPS	Y4, Y2, Y2
 
 	// __auto_tmp_008 = z * x
-	VMULPS	Y0, Y2, Y9
+	VMULPS	Y1, Y0, Y0
 
 	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
-	VADDPS	Y9, Y7, Y7
+	VADDPS	Y2, Y0, Y0
 
 	// out = __auto_tmp_004 - __auto_tmp_009
-	VSUBPS	Y7, Y4, Y4
-	VMOVDQU	Y4, (BX)(CX*4)
+	VSUBPS	Y0, Y5, Y1
+	VMOVDQU	Y1, (BX)(CX*4)
 	ADDQ	$8, CX
 
 	// if i >= length { break }
@@ -316,15 +316,15 @@ DetF32__process:
 	VMOVDQU	(R9)(CX*4), Y1
 
 	// __auto_tmp_000 = a * d
-	VMULPS	Y1, Y0, Y0
-	VMOVDQU	(DI)(CX*4), Y2
-	VMOVDQU	(R8)(CX*4), Y4
+	VMULPS	Y0, Y1, Y1
+	VMOVDQU	(DI)(CX*4), Y0
+	VMOVDQU	(R8)(CX*4), Y2
 
 	// __auto_tmp_001 = b * c
-	VMULPS	Y4, Y2, Y2
+	VMULPS	Y0, Y2, Y2
 
 	// det = __auto_tmp_000 - __auto_tmp_001
-	VSUBPS	Y2, Y0, Y0
+	VSUBPS	Y2, Y1, Y0
 	VMOVDQU	Y0, (BX)(CX*4)
 	ADDQ	$8, CX
 
