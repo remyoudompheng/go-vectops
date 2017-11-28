@@ -52,7 +52,7 @@ func TestFormula(t *testing.T) {
 	SomeFormula(out[:], a[:], b[:], c[:])
 	for i, xout := range out {
 		x, y, z := a[i], b[i], c[i]
-		expect := (x*y + y*z + z*x) - x*y*z
+		expect := (x*x + y*y + z*z) - (x*y + y*z + z*x)
 		if xout != expect {
 			t.Errorf("c[%d] = %-1g, expected %-1g", i, xout, expect)
 		}

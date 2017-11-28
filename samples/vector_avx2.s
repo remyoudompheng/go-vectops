@@ -135,20 +135,20 @@ SomeFormula__loop:
 
 SomeFormula__process:
 	VMOVDQU	(SI)(CX*4), Y0
+
+	// __auto_tmp_000 = x * x
+	VMULPS	Y0, Y0, Y4
 	VMOVDQU	(DI)(CX*4), Y1
 
-	// __auto_tmp_000 = x * y
-	VMULPS	Y1, Y0, Y4
-	VMOVDQU	(R8)(CX*4), Y2
-
-	// __auto_tmp_001 = y * z
-	VMULPS	Y2, Y1, Y5
+	// __auto_tmp_001 = y * y
+	VMULPS	Y1, Y1, Y5
 
 	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
 	VADDPS	Y5, Y4, Y4
+	VMOVDQU	(R8)(CX*4), Y2
 
-	// __auto_tmp_003 = z * x
-	VMULPS	Y0, Y2, Y6
+	// __auto_tmp_003 = z * z
+	VMULPS	Y2, Y2, Y6
 
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
 	VADDPS	Y6, Y4, Y4
@@ -156,10 +156,19 @@ SomeFormula__process:
 	// __auto_tmp_005 = x * y
 	VMULPS	Y1, Y0, Y7
 
-	// __auto_tmp_006 = __auto_tmp_005 * z
-	VMULPS	Y2, Y7, Y7
+	// __auto_tmp_006 = y * z
+	VMULPS	Y2, Y1, Y8
 
-	// out = __auto_tmp_004 - __auto_tmp_006
+	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
+	VADDPS	Y8, Y7, Y7
+
+	// __auto_tmp_008 = z * x
+	VMULPS	Y0, Y2, Y9
+
+	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
+	VADDPS	Y9, Y7, Y7
+
+	// out = __auto_tmp_004 - __auto_tmp_009
 	VSUBPS	Y7, Y4, Y4
 	VMOVDQU	Y4, (BX)(CX*4)
 	ADDQ	$8, CX

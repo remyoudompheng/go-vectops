@@ -149,22 +149,22 @@ SomeFormula__loop:
 SomeFormula__process:
 	ADD	R11<<2, R2, R0
 	WORD	$0xec900b04	// VLDMIA (R0), Q0
+
+	// __auto_tmp_000 = x * x
+	WORD	$0xf3006d50	// VMUL.F32 Q0, Q0, Q3
 	ADD	R11<<2, R3, R0
 	WORD	$0xec902b04	// VLDMIA (R0), Q1
 
-	// __auto_tmp_000 = x * y
-	WORD	$0xf3006d52	// VMUL.F32 Q0, Q1, Q3
-	ADD	R11<<2, R4, R0
-	WORD	$0xec904b04	// VLDMIA (R0), Q2
-
-	// __auto_tmp_001 = y * z
-	WORD	$0xf3028d54	// VMUL.F32 Q1, Q2, Q4
+	// __auto_tmp_001 = y * y
+	WORD	$0xf3028d52	// VMUL.F32 Q1, Q1, Q4
 
 	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
 	WORD	$0xf2066d48	// VADD.F32 Q3, Q4, Q3
+	ADD	R11<<2, R4, R0
+	WORD	$0xec904b04	// VLDMIA (R0), Q2
 
-	// __auto_tmp_003 = z * x
-	WORD	$0xf304ad50	// VMUL.F32 Q2, Q0, Q5
+	// __auto_tmp_003 = z * z
+	WORD	$0xf304ad54	// VMUL.F32 Q2, Q2, Q5
 
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
 	WORD	$0xf2066d4a	// VADD.F32 Q3, Q5, Q3
@@ -172,10 +172,19 @@ SomeFormula__process:
 	// __auto_tmp_005 = x * y
 	WORD	$0xf300cd52	// VMUL.F32 Q0, Q1, Q6
 
-	// __auto_tmp_006 = __auto_tmp_005 * z
-	WORD	$0xf30ccd54	// VMUL.F32 Q6, Q2, Q6
+	// __auto_tmp_006 = y * z
+	WORD	$0xf302ed54	// VMUL.F32 Q1, Q2, Q7
 
-	// out = __auto_tmp_004 - __auto_tmp_006
+	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
+	WORD	$0xf20ccd4e	// VADD.F32 Q6, Q7, Q6
+
+	// Manually added: __auto_tmp_006' = x * z
+	WORD	$0xf300ed54	// VMUL.F32 Q0, Q2, Q7
+
+	// Manually added: __auto_tmp_008 = __auto_tmp_007 + __auto_tmp_006'
+	WORD	$0xf20ccd4e	// VADD.F32 Q6, Q7, Q6
+
+	// out = __auto_tmp_004 - __auto_tmp_008
 	WORD	$0xf2266d4c	// VSUB.F32 Q3, Q6, Q3
 	ADD	R11<<2, R1, R0
 	WORD	$0xec806b04	// VSTMIA (R0), Q3

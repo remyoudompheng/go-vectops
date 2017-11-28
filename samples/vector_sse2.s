@@ -137,23 +137,23 @@ SomeFormula__loop:
 
 SomeFormula__process:
 	MOVUPS	(SI)(CX*4), X0
+
+	// __auto_tmp_000 = x * x
+	MOVAPS	X0, X4
+	MULPS	X0, X4
 	MOVUPS	(DI)(CX*4), X1
 
-	// __auto_tmp_000 = x * y
-	MOVAPS	X0, X4
-	MULPS	X1, X4
-	MOVUPS	(R8)(CX*4), X2
-
-	// __auto_tmp_001 = y * z
+	// __auto_tmp_001 = y * y
 	MOVAPS	X1, X5
-	MULPS	X2, X5
+	MULPS	X1, X5
 
 	// __auto_tmp_002 = __auto_tmp_000 + __auto_tmp_001
 	ADDPS	X5, X4
+	MOVUPS	(R8)(CX*4), X2
 
-	// __auto_tmp_003 = z * x
+	// __auto_tmp_003 = z * z
 	MOVAPS	X2, X6
-	MULPS	X0, X6
+	MULPS	X2, X6
 
 	// __auto_tmp_004 = __auto_tmp_002 + __auto_tmp_003
 	ADDPS	X6, X4
@@ -162,10 +162,21 @@ SomeFormula__process:
 	MOVAPS	X0, X7
 	MULPS	X1, X7
 
-	// __auto_tmp_006 = __auto_tmp_005 * z
-	MULPS	X2, X7
+	// __auto_tmp_006 = y * z
+	MOVAPS	X1, X8
+	MULPS	X2, X8
 
-	// out = __auto_tmp_004 - __auto_tmp_006
+	// __auto_tmp_007 = __auto_tmp_005 + __auto_tmp_006
+	ADDPS	X8, X7
+
+	// __auto_tmp_008 = z * x
+	MOVAPS	X2, X9
+	MULPS	X0, X9
+
+	// __auto_tmp_009 = __auto_tmp_007 + __auto_tmp_008
+	ADDPS	X9, X7
+
+	// out = __auto_tmp_004 - __auto_tmp_009
 	SUBPS	X7, X4
 	MOVUPD	X4, (BX)(CX*4)
 	ADDQ	$4, CX

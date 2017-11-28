@@ -9,7 +9,7 @@ func AddUints(out, in1, in2 []uint) {
 }
 
 func SomeFormula(out, x, y, z []float32) {
-	out = (x*y + y*z + z*x) -x*y*z
+	out = (x*x + y*y + z*z) - (x*y + y*z + z*x)
 }
 
 func subByte(out, a, b []byte) {
