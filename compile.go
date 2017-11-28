@@ -28,14 +28,12 @@ func (v *Var) Expr() string {
 }
 
 type Instr struct {
-	Kind    int
-	RegDest string
-	// For LOAD, STORE
-	Var *Var
+	Kind int
+	Var  *Var
 	// For OP
-	Op       Op
-	RegLeft  string
-	RegRight string
+	Op    Op
+	Left  *Var
+	Right *Var
 }
 
 const (
@@ -48,13 +46,13 @@ func (ins Instr) String() string {
 	switch ins.Kind {
 	case LOAD:
 		return fmt.Sprintf("LOAD %s+%s(*), %s",
-			ins.Var.Name, ins.Var.AddrReg, ins.RegDest)
+			ins.Var.Name, ins.Var.AddrReg, ins.Var.Location)
 	case STORE:
 		return fmt.Sprintf("STORE %s, %s+%s(*)",
-			ins.RegDest, ins.Var.Name, ins.Var.AddrReg)
+			ins.Var.Location, ins.Var.Name, ins.Var.AddrReg)
 	case OP:
 		return fmt.Sprintf("OP%s %s, %s, %s",
-			ins.Op, ins.RegLeft, ins.RegRight, ins.RegDest)
+			ins.Op, ins.Left.Location, ins.Right.Location, ins.Var.Location)
 	default:
 		panic("impossible")
 	}
@@ -202,7 +200,7 @@ func (c *Compiler) Emit(root *Var) []Instr {
 				// A leaf necessarily comes from memory.
 				panic("impossible")
 			}
-			instr := Instr{Kind: LOAD, Var: node, RegDest: node.Location}
+			instr := Instr{Kind: LOAD, Var: node}
 			instrs = append(instrs, instr)
 			done[node] = true
 			return // a leaf.
@@ -212,16 +210,15 @@ func (c *Compiler) Emit(root *Var) []Instr {
 			iterate(node.Right)
 		}
 		instr := Instr{Kind: OP, Op: node.Op, Var: node,
-			RegLeft:  node.Left.Location,
-			RegRight: node.Right.Location,
-			RegDest:  node.Location,
+			Left:  node.Left,
+			Right: node.Right,
 		}
 		instrs = append(instrs, instr)
 		done[node] = true
 	}
 	iterate(root)
 	instrs = append(instrs,
-		Instr{Kind: STORE, Var: root, RegDest: root.Location})
+		Instr{Kind: STORE, Var: root})
 	return instrs
 }
 

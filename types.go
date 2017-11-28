@@ -26,8 +26,10 @@ var types = map[string]GoType{
 
 type Op int
 
+func (o Op) String() string { return opstring[o] }
+
 const (
-	ADD = iota
+	ADD Op = iota
 	SUB
 	MUL
 	DIV

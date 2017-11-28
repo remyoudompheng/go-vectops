@@ -165,18 +165,18 @@ func (w codeWriter) emitInstr(ins Instr) {
 			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
 				w.arch.CounterReg, width)
 			if w.gosubarch == "avx2" {
-				w.opcode("VMOVDQU", loc, ins.RegDest)
+				w.opcode("VMOVDQU", loc, ins.Var.Location)
 			} else {
-				w.opcode("MOVUPS", loc, ins.RegDest)
+				w.opcode("MOVUPS", loc, ins.Var.Location)
 			}
 		case STORE:
 			width := w.arch.Width(ins.Var.Type)
 			loc := fmt.Sprintf("(%s)(%s*%d)", ins.Var.AddrReg,
 				w.arch.CounterReg, width)
 			if w.gosubarch == "avx2" {
-				w.opcode("VMOVDQU", ins.RegDest, loc)
+				w.opcode("VMOVDQU", ins.Var.Location, loc)
 			} else {
-				w.opcode("MOVUPD", ins.RegDest, loc)
+				w.opcode("MOVUPD", ins.Var.Location, loc)
 			}
 		case OP:
 			v := ins.Var
@@ -187,13 +187,13 @@ func (w codeWriter) emitInstr(ins Instr) {
 			}
 			if w.gosubarch == "avx2" {
 				// use ternary form
-				w.opcode(opcode, ins.RegRight, ins.RegLeft, ins.RegDest)
+				w.opcode(opcode, ins.Right.Location, ins.Left.Location, ins.Var.Location)
 			} else {
-				if ins.RegDest == ins.RegLeft {
-					w.opcode(opcode, ins.RegRight, ins.RegLeft)
+				if ins.Var.Location == ins.Left.Location {
+					w.opcode(opcode, ins.Right.Location, ins.Left.Location)
 				} else {
-					w.opcode("MOVAPS", ins.RegLeft, ins.RegDest)
-					w.opcode(opcode, ins.RegRight, ins.RegDest)
+					w.opcode("MOVAPS", ins.Left.Location, ins.Var.Location)
+					w.opcode(opcode, ins.Right.Location, ins.Var.Location)
 				}
 			}
 		}
@@ -204,27 +204,27 @@ func (w codeWriter) emitInstr(ins Instr) {
 			logwidth := w.arch.LogWidth(ins.Var.Type)
 			offset := fmt.Sprintf("%s<<%d", w.arch.CounterReg, logwidth)
 			w.opcode("ADD", offset, ins.Var.AddrReg, spareReg)
-			if strings.HasPrefix(ins.RegDest, "Q") {
-				regd := regNr(ins.RegDest) // encoded on bits 22, 15-12
+			if strings.HasPrefix(ins.Var.Location, "Q") {
+				regd := regNr(ins.Var.Location) // encoded on bits 22, 15-12
 				regs := regNr(spareReg)
 				enc := assembleNEON("VLDM", false, regs, 4, 2*regd) // 4 = four words
 				fmt.Fprintf(w.w, "\tWORD\t$0x%08x\t// %s %s, %s\n",
-					enc, "VLDMIA", "("+spareReg+")", ins.RegDest)
+					enc, "VLDMIA", "("+spareReg+")", ins.Var.Location)
 			} else {
-				w.opcode("MOVD", "("+spareReg+")", ins.RegDest)
+				w.opcode("MOVD", "("+spareReg+")", ins.Var.Location)
 			}
 		case STORE:
 			logwidth := w.arch.LogWidth(ins.Var.Type)
 			offset := fmt.Sprintf("%s<<%d", w.arch.CounterReg, logwidth)
 			w.opcode("ADD", offset, ins.Var.AddrReg, spareReg)
-			if strings.HasPrefix(ins.RegDest, "Q") {
-				regd := regNr(ins.RegDest) // encoded on bits 22, 15-12
+			if strings.HasPrefix(ins.Var.Location, "Q") {
+				regd := regNr(ins.Var.Location) // encoded on bits 22, 15-12
 				regs := regNr(spareReg)
 				enc := assembleNEON("VSTM", false, regs, 4, 2*regd) // 4 = four words
 				fmt.Fprintf(w.w, "\tWORD\t$0x%08x\t// %s %s, %s\n",
-					enc, "VSTMIA", "("+spareReg+")", ins.RegDest)
+					enc, "VSTMIA", "("+spareReg+")", ins.Var.Location)
 			} else {
-				w.opcode("MOVD", ins.RegDest, "("+spareReg+")")
+				w.opcode("MOVD", ins.Var.Location, "("+spareReg+")")
 			}
 		case OP:
 			v := ins.Var
@@ -233,7 +233,7 @@ func (w codeWriter) emitInstr(ins Instr) {
 			if !ok {
 				panic("unsupported operation")
 			}
-			w.opcodeNEON(opcode, ins.RegLeft, ins.RegRight, ins.RegDest)
+			w.opcodeNEON(opcode, ins.Left.Location, ins.Right.Location, ins.Var.Location)
 		}
 	default:
 		panic("not implemented")

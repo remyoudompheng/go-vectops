@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	gotypes "go/types"
 	"testing"
 )
 
@@ -19,6 +20,7 @@ func TestCompile(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	t.Logf("compiled %s", gotypes.ExprString(f.Formula))
 	for _, ins := range instrs {
 		t.Log(ins)
 	}
